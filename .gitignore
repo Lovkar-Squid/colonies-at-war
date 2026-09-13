@@ -1,0 +1,21 @@
+# compiled output and scratch
+build/
+build2/
+tools/out/
+tools/__pycache__/
+__pycache__/
+*.jar
+*.zip
+*.args
+*.log
+
+# third-party jars and decompiled sources - NEVER commit (their licenses do not allow redistribution)
+libs/
+clibs/
+old/
+decomp/
+decomp-structurize/
+stubs/
+
+# local publishing notes
+publish/

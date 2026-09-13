@@ -1,0 +1,40 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "minecolonies:combat/tactictraining",
+  "researchLevel": 2,
+  "sortOrder": 1,
+  "subtitle": "com.colonies_at_war.research.combat.standing_army.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:building",
+      "building": "minecolonies:townhall",
+      "level": 3
+    },
+    {
+      "type": "minecolonies:building",
+      "building": "minecolonies:barracks",
+      "level": 1
+    }
+  ],
+  "costs": [
+    {
+      "count": 24,
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "count": 8,
+      "item": "minecraft:paper"
+    },
+    {
+      "count": 1,
+      "item": "minecraft:map"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/blockhutwarroom",
+      "level": 1
+    }
+  ],
+  "icon": "colonies_at_war:blockhutwarroom"
+}

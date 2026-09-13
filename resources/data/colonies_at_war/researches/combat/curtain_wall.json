@@ -1,0 +1,31 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/standing_army",
+  "researchLevel": 3,
+  "sortOrder": 1,
+  "subtitle": "com.colonies_at_war.research.combat.curtain_wall.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:warroom",
+      "level": 1
+    }
+  ],
+  "costs": [
+    {
+      "count": 64,
+      "item": "minecraft:stone_bricks"
+    },
+    {
+      "count": 16,
+      "item": "minecraft:oak_log"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/blockhutwalltower",
+      "level": 1
+    }
+  ],
+  "icon": "colonies_at_war:blockhutwalltower"
+}

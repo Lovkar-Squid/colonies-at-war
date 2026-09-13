@@ -1,0 +1,16 @@
+{
+  "icon": "colonies_at_war.png",
+  "name": "Colonies at War",
+  "authors": [
+    "Lovkar",
+    "Claude"
+  ],
+  "desc": "Colonies at War: two buildings and a wall. The Wall Tower is a guard post that stands in a wall line - run your rampart into either side of it and the walk carries straight through. The War Room is the table a colony decides to march at, and the quarters of the garrison that marches. The wall segment, corner, gate and stair are the wall itself: mark out a line, and the colony raises a real curtain around the town, eight blocks at a time, with the walk at the tower's own height, a gate to come through and a stair to get up on. Works with every colony style.",
+  "mods": [
+    "structurize",
+    "minecolonies",
+    "colonies_at_war"
+  ],
+  "version": "1",
+  "pack-format": "1"
+}

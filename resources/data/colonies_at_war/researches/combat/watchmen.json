@@ -1,0 +1,36 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/curtain_wall",
+  "researchLevel": 4,
+  "sortOrder": 2,
+  "subtitle": "com.colonies_at_war.research.combat.watchmen.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:walltower",
+      "level": 2
+    },
+    {
+      "type": "minecolonies:building",
+      "building": "minecolonies:archery",
+      "level": 2
+    }
+  ],
+  "costs": [
+    {
+      "count": 24,
+      "item": "minecraft:arrow"
+    },
+    {
+      "count": 8,
+      "item": "minecraft:glass"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/watchmen",
+      "level": 1
+    }
+  ],
+  "icon": "minecraft:spyglass"
+}

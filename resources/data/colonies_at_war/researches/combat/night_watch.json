@@ -1,0 +1,31 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/watchmen",
+  "researchLevel": 5,
+  "sortOrder": 2,
+  "subtitle": "com.colonies_at_war.research.combat.night_watch.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:walltower",
+      "level": 4
+    }
+  ],
+  "costs": [
+    {
+      "count": 16,
+      "item": "minecraft:lantern"
+    },
+    {
+      "count": 8,
+      "item": "minecraft:ender_pearl"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/watchmen",
+      "level": 2
+    }
+  ],
+  "icon": "minecraft:lantern"
+}

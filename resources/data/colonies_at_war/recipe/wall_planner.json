@@ -1,0 +1,18 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "P": { "item": "minecraft:paper" },
+    "M": { "item": "minecraft:map" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "pattern": [
+    "PPP",
+    "PMP",
+    " I "
+  ],
+  "result": {
+    "count": 1,
+    "id": "colonies_at_war:wall_planner"
+  }
+}

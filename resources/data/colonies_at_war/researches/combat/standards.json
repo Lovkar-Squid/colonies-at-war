@@ -1,0 +1,31 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/drill",
+  "researchLevel": 4,
+  "sortOrder": 3,
+  "subtitle": "com.colonies_at_war.research.combat.standards.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:warroom",
+      "level": 3
+    }
+  ],
+  "costs": [
+    {
+      "count": 8,
+      "item": "minecraft:white_banner"
+    },
+    {
+      "count": 16,
+      "item": "minecraft:gold_ingot"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/drill",
+      "level": 2
+    }
+  ],
+  "icon": "minecraft:white_banner"
+}

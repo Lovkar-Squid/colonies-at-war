@@ -1,0 +1,36 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/standing_army",
+  "researchLevel": 3,
+  "sortOrder": 2,
+  "subtitle": "com.colonies_at_war.research.combat.drill.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:warroom",
+      "level": 2
+    },
+    {
+      "type": "minecolonies:building",
+      "building": "minecolonies:combatacademy",
+      "level": 2
+    }
+  ],
+  "costs": [
+    {
+      "count": 16,
+      "item": "minecraft:iron_ingot"
+    },
+    {
+      "count": 8,
+      "item": "minecraft:leather"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/drill",
+      "level": 1
+    }
+  ],
+  "icon": "minecraft:iron_sword"
+}

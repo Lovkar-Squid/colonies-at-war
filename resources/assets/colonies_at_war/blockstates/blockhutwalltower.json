@@ -1,0 +1,20 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "colonies_at_war:block/blockhutwalltower",
+      "y": 0
+    },
+    "facing=east": {
+      "model": "colonies_at_war:block/blockhutwalltower",
+      "y": 90
+    },
+    "facing=south": {
+      "model": "colonies_at_war:block/blockhutwalltower",
+      "y": 180
+    },
+    "facing=west": {
+      "model": "colonies_at_war:block/blockhutwalltower",
+      "y": 270
+    }
+  }
+}

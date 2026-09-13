@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd"
+        size="190 244">
+
+    <image source="minecolonies:textures/gui/builderhut/builder_paper.png" size="190 244"/>
+    <text id="title" size="150 11" pos="20 13" color="black" textalign="MIDDLE"
+          label="$(com.colonies_at_war.gui.walls.title)"/>
+    <text id="score" size="168 11" pos="11 27" color="black" textalign="MIDDLE" textscale="0.9"/>
+
+    <button id="raise" size="80 17" pos="11 41" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_medium_disabled.png"
+            disabledsize="80 17"/>
+    <button id="mend" size="80 17" pos="99 41" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_medium_disabled.png"
+            disabledsize="80 17"
+            label="$(com.colonies_at_war.gui.walls.mend)"/>
+
+    <list id="pieces" size="168 178" pos="11 62"
+          emptytext="$(com.colonies_at_war.gui.walls.empty)" emptycolor="black">
+        <box size="100% 26" linewidth="0">
+            <text id="what" size="104 11" pos="3 1" color="black"/>
+            <text id="state" size="104 10" pos="3 12" color="black" textscale="0.8"/>
+            <button id="one" size="38 17" pos="112 4" color="black"
+                    source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+                    disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+                    disabledsize="38 17"/>
+        </box>
+    </list>
+</window>

@@ -1,0 +1,36 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/curtain_wall",
+  "researchLevel": 4,
+  "sortOrder": 1,
+  "subtitle": "com.colonies_at_war.research.combat.masonry.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:walltower",
+      "level": 2
+    },
+    {
+      "type": "minecolonies:building",
+      "building": "minecolonies:stonemason",
+      "level": 3
+    }
+  ],
+  "costs": [
+    {
+      "count": 64,
+      "item": "minecraft:stone_bricks"
+    },
+    {
+      "count": 16,
+      "item": "minecraft:iron_ingot"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/masonry",
+      "level": 1
+    }
+  ],
+  "icon": "minecraft:stone_bricks"
+}

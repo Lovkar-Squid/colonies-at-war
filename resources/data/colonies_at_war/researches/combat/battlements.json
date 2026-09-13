@@ -1,0 +1,36 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/masonry",
+  "researchLevel": 5,
+  "sortOrder": 1,
+  "subtitle": "com.colonies_at_war.research.combat.battlements.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:walltower",
+      "level": 4
+    },
+    {
+      "type": "minecolonies:building",
+      "building": "minecolonies:stonemason",
+      "level": 4
+    }
+  ],
+  "costs": [
+    {
+      "count": 64,
+      "item": "minecraft:deepslate_bricks"
+    },
+    {
+      "count": 8,
+      "item": "minecraft:diamond"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/masonry",
+      "level": 2
+    }
+  ],
+  "icon": "minecraft:deepslate_bricks"
+}

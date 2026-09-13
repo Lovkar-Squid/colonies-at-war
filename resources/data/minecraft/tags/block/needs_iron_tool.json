@@ -1,0 +1,7 @@
+{
+  "replace": false,
+  "values": [
+    "colonies_at_war:fortified_rampart",
+    "colonies_at_war:fortified_parapet"
+  ]
+}
