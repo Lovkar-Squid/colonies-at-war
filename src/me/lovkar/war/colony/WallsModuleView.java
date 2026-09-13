@@ -26,6 +26,7 @@ public class WallsModuleView extends AbstractBuildingModuleView {
 
     private final List<Piece> pieces = new ArrayList<>();
     private int score = -1;
+    private int borrowed;
 
     @Override
     public void deserialize(final @NotNull RegistryFriendlyByteBuf buf) {
@@ -36,6 +37,7 @@ public class WallsModuleView extends AbstractBuildingModuleView {
                     buf.readVarInt(), buf.readInt(), buf.readBoolean()));
         }
         score = buf.readVarInt();
+        borrowed = buf.readVarInt();
     }
 
     public List<Piece> pieces() {
@@ -45,6 +47,11 @@ public class WallsModuleView extends AbstractBuildingModuleView {
     /** 0..100, or -1 when the colony has laid no wall of ours at all. */
     public int score() {
         return score;
+    }
+
+    /** How many style pack wall decorations the score is counting besides our own pieces. */
+    public int borrowed() {
+        return borrowed;
     }
 
     /** The lowest level anything is meant to be - what "upgrade all" would raise from. */

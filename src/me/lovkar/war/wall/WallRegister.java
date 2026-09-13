@@ -41,6 +41,7 @@ public class WallRegister extends SavedData {
     private static final String TAG_COLONIES = "colonies";
     private static final String TAG_POS = "pos";
     private static final String TAG_TIER = "tier";
+    private static final String TAG_BORROWED = "borrowed";
 
     /** Bearings the circle is cut into when coverage is measured. */
     private static final int BEARINGS = 64;
@@ -52,8 +53,24 @@ public class WallRegister extends SavedData {
 
     /** colony id -> (packed position -> tier * 10 + weight in tenths) */
     private final Map<Integer, Map<Long, Byte>> walls = new HashMap<>();
+    /**
+     * colony id -> (decoration controller -> the wall blocks that decoration is made of)
+     *
+     * <p>Somebody else's wall - a style pack's {@code walls/} decoration, found by
+     * {@link WallSurvey}. Kept apart from our own on purpose. Ours is a set of blocks that each
+     * announced themselves and can be trusted to the block; this is a measurement of a box, taken
+     * whenever a chunk loads, and it has to be possible to throw the whole of one away when the
+     * decoration that justified it is gone. Keyed by the controller, so that is one removal.</p>
+     *
+     * <p>It counts towards the score and nothing else. It is deliberately not patrolled: a patrol
+     * laid by {@link #run} through the body of a three-thick foreign wall would wander inside it,
+     * and a guard walking through a wall is worse than a guard walking round it.</p>
+     */
+    private final Map<Integer, Map<Long, Map<Long, Byte>>> borrowed = new HashMap<>();
     /** colony id -> last computed score, cleared whenever a block moves. */
     private final Map<Integer, Integer> scores = new HashMap<>();
+    /** colony id -> ours and theirs in one map, cleared with the score. Never saved. */
+    private final Map<Integer, Map<Long, Byte>> merged = new HashMap<>();
 
     public static final SavedData.Factory<WallRegister> FACTORY =
             new SavedData.Factory<>(WallRegister::new, WallRegister::read);
@@ -74,7 +91,7 @@ public class WallRegister extends SavedData {
         final WallRegister register = of(level);
         register.walls.computeIfAbsent(colony.getID(), k -> new HashMap<>())
                 .put(pos.asLong(), pack(piece));
-        register.scores.remove(colony.getID());
+        register.forget(colony.getID());
         register.setDirty();
     }
 
@@ -84,7 +101,7 @@ public class WallRegister extends SavedData {
         final long key = pos.asLong();
         for (final Map.Entry<Integer, Map<Long, Byte>> e : register.walls.entrySet()) {
             if (e.getValue().remove(key) != null) {
-                register.scores.remove(e.getKey());
+                register.forget(e.getKey());
                 register.setDirty();
                 return;
             }
@@ -100,8 +117,13 @@ public class WallRegister extends SavedData {
      * test server found it in a minute; it would have been invisible for weeks.</p>
      */
     private static byte pack(final WallPiece piece) {
-        final int tier = Math.max(1, Math.min(3, piece.tier()));
-        final int weight = Math.max(1, Math.min(15, Math.round(piece.weight() * 10f)));
+        return pack(piece.tier(), piece.weight());
+    }
+
+    /** The same, for a block that is not one of ours and so cannot be asked. */
+    static byte pack(final int rawTier, final float rawWeight) {
+        final int tier = Math.max(1, Math.min(3, rawTier));
+        final int weight = Math.max(1, Math.min(15, Math.round(rawWeight * 10f)));
         return (byte) (tier * 16 + weight);
     }
 
@@ -124,8 +146,8 @@ public class WallRegister extends SavedData {
             return -1;
         }
         final WallRegister register = of(level);
-        final Map<Long, Byte> mine = register.walls.get(colony.getID());
-        if (mine == null || mine.isEmpty()) {
+        final Map<Long, Byte> mine = register.all(colony.getID());
+        if (mine.isEmpty()) {
             return -1;
         }
         final Map<Long, Byte> filled = withFilledGaps(colony, level, mine);
@@ -143,6 +165,133 @@ public class WallRegister extends SavedData {
         register.scores.put(colony.getID(), computed);
         return withMasonry(colony, computed);
     }
+
+    // ------------------------------------------------------------------ somebody else's wall
+
+    /**
+     * Ours and theirs in one map - what every measurement actually reads.
+     *
+     * <p>The ordinary colony has borrowed nothing, and for that one this hands back the very map
+     * the blocks registered themselves into, with nothing copied and nothing allocated. A colony
+     * that has both pays for one merge, once, and keeps it until a block moves.</p>
+     */
+    private Map<Long, Byte> all(final int colonyId) {
+        final Map<Long, Byte> ours = walls.get(colonyId);
+        final Map<Long, Map<Long, Byte>> theirs = borrowed.get(colonyId);
+        if (theirs == null || theirs.isEmpty()) {
+            return ours == null ? Map.of() : ours;
+        }
+        final Map<Long, Byte> cached = merged.get(colonyId);
+        if (cached != null) {
+            return cached;
+        }
+        final Map<Long, Byte> out = ours == null ? new HashMap<>() : new HashMap<>(ours);
+        for (final Map<Long, Byte> one : theirs.values()) {
+            for (final Map.Entry<Long, Byte> e : one.entrySet()) {
+                out.putIfAbsent(e.getKey(), e.getValue());   // ours wins where they overlap
+            }
+        }
+        merged.put(colonyId, out);
+        return out;
+    }
+
+    /** Whatever was worked out about this colony is no longer true. */
+    private void forget(final int colonyId) {
+        scores.remove(colonyId);
+        merged.remove(colonyId);
+    }
+
+    /** Take in one style pack wall decoration, measured by {@link WallSurvey}. */
+    static void borrow(final ServerLevel level, final int colonyId, final BlockPos controller,
+                       final Map<Long, Byte> blocks) {
+        final WallRegister register = of(level);
+        final Map<Long, Map<Long, Byte>> mine =
+                register.borrowed.computeIfAbsent(colonyId, k -> new HashMap<>());
+        int already = 0;
+        for (final Map<Long, Byte> one : mine.values()) {
+            already += one.size();
+        }
+        if (already + blocks.size() > MAX_BORROWED) {
+            return;         // a save file is not allowed to grow without limit
+        }
+        mine.put(controller.asLong(), new HashMap<>(blocks));
+        register.forget(colonyId);
+        register.setDirty();
+    }
+
+    /** Stop counting one decoration - it was broken, renamed, or is no longer a wall. */
+    static void unborrow(final ServerLevel level, final BlockPos controller) {
+        final WallRegister register = of(level);
+        final long key = controller.asLong();
+        for (final Map.Entry<Integer, Map<Long, Map<Long, Byte>>> e : register.borrowed.entrySet()) {
+            if (e.getValue().remove(key) != null) {
+                register.forget(e.getKey());
+                register.setDirty();
+                return;
+            }
+        }
+    }
+
+    /** Whether this decoration has already been measured, so a chunk load need not do it again. */
+    static boolean borrowedAlready(final ServerLevel level, final int colonyId, final BlockPos controller) {
+        final Map<Long, Map<Long, Byte>> mine = of(level).borrowed.get(colonyId);
+        return mine != null && mine.containsKey(controller.asLong());
+    }
+
+    /**
+     * Drop every borrowed decoration in this chunk that is not in the set just found there.
+     *
+     * <p>This is what makes the survey self-correcting. A chunk is looked at whole, so a
+     * controller the register still remembers and the chunk no longer has was demolished while
+     * nobody was watching, and its wall stops counting now rather than forever.</p>
+     */
+    static void forgetMissing(final ServerLevel level, final net.minecraft.world.level.ChunkPos chunk,
+                              final Set<BlockPos> present) {
+        final WallRegister register = of(level);
+        boolean changed = false;
+        for (final Map.Entry<Integer, Map<Long, Map<Long, Byte>>> e : register.borrowed.entrySet()) {
+            final java.util.Iterator<Long> it = e.getValue().keySet().iterator();
+            while (it.hasNext()) {
+                final BlockPos at = BlockPos.of(it.next());
+                if (at.getX() >> 4 == chunk.x && at.getZ() >> 4 == chunk.z && !present.contains(at)) {
+                    it.remove();
+                    register.forget(e.getKey());
+                    changed = true;
+                }
+            }
+        }
+        if (changed) {
+            register.setDirty();
+        }
+    }
+
+    /** How many blocks of somebody else's wall this colony is being credited for. */
+    public static int borrowedBlocks(final IColony colony) {
+        if (colony == null || !(colony.getWorld() instanceof ServerLevel level)) {
+            return 0;
+        }
+        final Map<Long, Map<Long, Byte>> mine = of(level).borrowed.get(colony.getID());
+        if (mine == null) {
+            return 0;
+        }
+        int total = 0;
+        for (final Map<Long, Byte> one : mine.values()) {
+            total += one.size();
+        }
+        return total;
+    }
+
+    /** How many style pack wall decorations this colony is being credited for. */
+    public static int borrowedPieces(final IColony colony) {
+        if (colony == null || !(colony.getWorld() instanceof ServerLevel level)) {
+            return 0;
+        }
+        final Map<Long, Map<Long, Byte>> mine = of(level).borrowed.get(colony.getID());
+        return mine == null ? 0 : mine.size();
+    }
+
+    /** No colony may borrow more than this many blocks. */
+    private static final int MAX_BORROWED = 24000;
 
     // ------------------------------------------------------------------ the gaps towers stand in
 
@@ -406,6 +555,22 @@ public class WallRegister extends SavedData {
             }
             out.walls.put(Integer.parseInt(key), mine);
         }
+        final CompoundTag lent = tag.getCompound(TAG_BORROWED);
+        for (final String key : lent.getAllKeys()) {
+            final CompoundTag one = lent.getCompound(key);
+            final Map<Long, Map<Long, Byte>> mine = new HashMap<>();
+            for (final String anchor : one.getAllKeys()) {
+                final CompoundTag deco = one.getCompound(anchor);
+                final long[] positions = deco.getLongArray(TAG_POS);
+                final byte[] tiers = deco.getByteArray(TAG_TIER);
+                final Map<Long, Byte> blocks = new HashMap<>();
+                for (int i = 0; i < positions.length && i < tiers.length; i++) {
+                    blocks.put(positions[i], tiers[i]);
+                }
+                mine.put(Long.parseLong(anchor), blocks);
+            }
+            out.borrowed.put(Integer.parseInt(key), mine);
+        }
         return out;
     }
 
@@ -427,6 +592,29 @@ public class WallRegister extends SavedData {
             colonies.put(String.valueOf(e.getKey()), one);
         }
         tag.put(TAG_COLONIES, colonies);
+        final CompoundTag lent = new CompoundTag();
+        for (final Map.Entry<Integer, Map<Long, Map<Long, Byte>>> e : borrowed.entrySet()) {
+            if (e.getValue().isEmpty()) {
+                continue;
+            }
+            final CompoundTag one = new CompoundTag();
+            for (final Map.Entry<Long, Map<Long, Byte>> deco : e.getValue().entrySet()) {
+                final CompoundTag blocks = new CompoundTag();
+                final long[] positions = new long[deco.getValue().size()];
+                final byte[] tiers = new byte[deco.getValue().size()];
+                int i = 0;
+                for (final Map.Entry<Long, Byte> w : deco.getValue().entrySet()) {
+                    positions[i] = w.getKey();
+                    tiers[i] = w.getValue();
+                    i++;
+                }
+                blocks.putLongArray(TAG_POS, positions);
+                blocks.putByteArray(TAG_TIER, tiers);
+                one.put(String.valueOf(deco.getKey()), blocks);
+            }
+            lent.put(String.valueOf(e.getKey()), one);
+        }
+        tag.put(TAG_BORROWED, lent);
         return tag;
     }
 }

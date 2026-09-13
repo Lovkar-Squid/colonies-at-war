@@ -25,6 +25,22 @@ high scores **100**; knock a thirteen-block breach in it and it falls to **75**.
 
 Wall blocks are hard but **not invincible**. A wall you cannot lose is a wall nobody attacks.
 
+### Somebody else's wall
+
+Registering itself is the right *default*, not the only way in. Nearly every MineColonies style
+pack ships a `walls/` category, and a town ringed in Caledonia curtain wall or Nordic palisade has
+built a wall by any reading of the word. So a second door: the **decoration controller** every
+built decoration leaves behind is read where it stands, and if its blueprint path says walls, what
+is standing inside the decoration's own corners is measured and credited — 515 wall blueprints
+across 23 style packs, out of the box.
+
+What counts is read off the blueprint's **folder**, never its name, so a moat, a fence and a hedge
+— all of them shipped under `walls/` by somebody — stay out, and the promise that a long barn is
+still a barn survives. Strength comes from the material, the same as ours; only the courses above
+the anchor count, because a wall is not credited for the ground it stands on; and a piece is
+dropped the moment it is gone. Borrowed wall counts towards the score and is deliberately **not**
+patrolled: a patrol laid through the body of a three-thick foreign wall is worse than none.
+
 ## The Wall Tower
 
 A guard post that stands *in* a wall — the walk runs through it at head height, so a rampart butted

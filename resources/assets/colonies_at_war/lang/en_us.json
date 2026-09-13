@@ -74,6 +74,7 @@
   "com.colonies_at_war.gui.walls.tab": "The walls",
   "com.colonies_at_war.gui.walls.title": "The walls",
   "com.colonies_at_war.gui.walls.score": "%1$s/100 - %2$s of %3$s up",
+  "com.colonies_at_war.gui.walls.score_borrowed": "%1$s/100 - %2$s of %3$s up, %4$s borrowed",
   "com.colonies_at_war.gui.walls.raise": "Raise to %s",
   "com.colonies_at_war.gui.walls.mend": "Mend it all",
   "com.colonies_at_war.gui.walls.empty": "No wall yet. Take a Wall Planner, mark two corners, and the Builder does the rest.",

@@ -80,8 +80,16 @@ public class WallsWindow extends AbstractModuleWindow<WallsModuleView> {
                 up++;
             }
         }
-        score.setText(Component.translatable("com.colonies_at_war.gui.walls.score",
-                        Math.max(0, moduleView.score()), up, moduleView.pieces().size())
+        // a colony can have a score with no pieces of ours at all - all of its wall borrowed from
+        // a style pack - so the borrowed count gets its own line rather than a fourth argument
+        // squeezed into a sentence that reads oddly when it is zero
+        final MutableComponent line = moduleView.borrowed() > 0
+                ? Component.translatable("com.colonies_at_war.gui.walls.score_borrowed",
+                        Math.max(0, moduleView.score()), up, moduleView.pieces().size(),
+                        moduleView.borrowed())
+                : Component.translatable("com.colonies_at_war.gui.walls.score",
+                        Math.max(0, moduleView.score()), up, moduleView.pieces().size());
+        score.setText(line
                 .withStyle(moduleView.score() >= 70 ? ChatFormatting.DARK_GREEN
                         : moduleView.score() >= 35 ? ChatFormatting.GOLD : ChatFormatting.DARK_RED));
     }

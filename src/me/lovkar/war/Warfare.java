@@ -184,6 +184,15 @@ public class Warfare {
         modEventBus.addListener(Warfare::addToCreativeTab);
         modEventBus.addListener(Warfare::registerPayloads);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(WarCommands::register);
+        // Somebody else's wall: a style pack's walls/ decoration is found where it stands, taken
+        // in when its chunk loads and dropped when it is gone. See WallSurvey for why this is a
+        // second door into the register and not a replacement for the first.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.wall.WallSurvey::onChunkLoad);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.wall.WallSurvey::onLevelTick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.wall.WallSurvey::onBreak);
         LOGGER.info("Colonies at War loaded - walls, wall towers and the War Room");
     }
 

@@ -29,6 +29,7 @@ public class WallsModule extends AbstractBuildingModule implements IPersistentMo
         if (colony == null || !(colony.getWorld() instanceof ServerLevel level)) {
             buf.writeVarInt(0);
             buf.writeVarInt(-1);
+            buf.writeVarInt(0);
             return;
         }
         final List<WallPlan.Piece> pieces = WallPlan.of(level).all(colony.getID());
@@ -46,5 +47,8 @@ public class WallsModule extends AbstractBuildingModule implements IPersistentMo
                     && WallOrders.pending(colony, piece.pos()));
         }
         buf.writeVarInt(WallRegister.score(colony));
+        // ...and how many walls of somebody else's the score is counting, so that a colony whose
+        // wall is all Caledonia can see why it has a number at all
+        buf.writeVarInt(WallRegister.borrowedPieces(colony));
     }
 }
