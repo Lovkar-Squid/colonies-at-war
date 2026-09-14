@@ -193,6 +193,10 @@ public class Warfare {
                 me.lovkar.war.wall.WallSurvey::onLevelTick);
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 me.lovkar.war.wall.WallSurvey::onBreak);
+        // ...and forgotten when the world closes: the survey's queue is keyed by dimension, and
+        // every singleplayer world has a minecraft:overworld.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> me.lovkar.war.wall.WallSurvey.forget());
         LOGGER.info("Colonies at War loaded - walls, wall towers and the War Room");
     }
 

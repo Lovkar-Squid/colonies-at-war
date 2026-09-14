@@ -92,6 +92,19 @@ public final class WallSurvey {
     private static final int QUEUE_CAP = 8192;
 
     /**
+     * How many passes may fail before the survey gives up for the rest of the session.
+     *
+     * <p>This whole class is a nicety: it counts walls somebody else built, and a colony whose
+     * borrowed walls are not counted loses a number on a screen. On 14 Sep 2026 it was instead the
+     * reason a world stopped ticking, which is not a trade worth making at any odds. So a pass that
+     * throws is a line in the log, and a handful of them switch the survey off rather than filling
+     * the log and the tick budget with the same failure forever.</p>
+     */
+    private static final int MAX_STRIKES = 5;
+    private static int strikes;
+    private static boolean off;
+
+    /**
      * Chunks that have loaded and not yet been looked at, per dimension.
      *
      * <p>A set, not a list, and in arrival order: a chunk load queues its eight neighbours as well
@@ -112,41 +125,81 @@ public final class WallSurvey {
      * later, which also stops a world load from surveying four hundred chunks in one frame.
      */
     public static void onChunkLoad(final ChunkEvent.Load event) {
-        if (!WarConfig.countStylePackWalls() || !(event.getLevel() instanceof ServerLevel level)) {
+        if (off || !WarConfig.countStylePackWalls() || !(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        final java.util.LinkedHashSet<Long> queue =
-                WAITING.computeIfAbsent(level.dimension(), k -> new java.util.LinkedHashSet<>());
-        if (queue.size() >= QUEUE_CAP) {
-            return;
-        }
-        final ChunkPos at = event.getChunk().getPos();
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dz = -1; dz <= 1; dz++) {
-                queue.add(ChunkPos.asLong(at.x + dx, at.z + dz));
+        try {
+            final java.util.LinkedHashSet<Long> queue =
+                    WAITING.computeIfAbsent(level.dimension(), k -> new java.util.LinkedHashSet<>());
+            if (queue.size() >= QUEUE_CAP) {
+                return;
             }
+            final ChunkPos at = event.getChunk().getPos();
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    queue.add(ChunkPos.asLong(at.x + dx, at.z + dz));
+                }
+            }
+        } catch (final Throwable t) {
+            Warfare.LOGGER.warn("[wall] could not queue a loaded chunk: {}", t.toString());
         }
     }
 
     /** A few of the waiting chunks, every couple of seconds. */
     public static void onLevelTick(final LevelTickEvent.Post event) {
-        if (!(event.getLevel() instanceof ServerLevel level) || ++ticks % EVERY != 0) {
+        if (off || !(event.getLevel() instanceof ServerLevel level) || ++ticks % EVERY != 0) {
             return;
         }
+        try {
+            drain(level);
+        } catch (final Throwable t) {
+            if (++strikes >= MAX_STRIKES) {
+                off = true;
+                Warfare.LOGGER.error("[wall] the style-pack wall survey has failed {} times and is now "
+                        + "off for the rest of this session; walls from other packs will not be counted. "
+                        + "The last failure was: {}", strikes, t.toString(), t);
+            } else {
+                Warfare.LOGGER.warn("[wall] survey pass failed ({} of {}): {}", strikes, MAX_STRIKES, t.toString());
+            }
+        }
+    }
+
+    /**
+     * This pass's chunks, taken <b>out</b> of the queue before a single one of them is looked at.
+     *
+     * <p>Looking at a chunk can load another one: {@code getChunk} promotes it, {@code
+     * ChunkEvent.Load} fires on this same thread before the call returns, and {@link #onChunkLoad}
+     * then adds nine positions to the very set the iterator is walking. That is a {@code
+     * ConcurrentModificationException} thrown out of the level tick, which is to say a crashed
+     * server - and it is exactly what happened on 14 Sep 2026, while a wall tower was being
+     * built.</p>
+     *
+     * <p>So nothing here may iterate the live queue. The batch is lifted out first, with only the
+     * iterator's own methods running between {@code iterator()} and the last {@code remove()}, and
+     * everything that arrives while the pass works lands in the queue for the next one - which is
+     * where it belonged anyway.</p>
+     */
+    private static void drain(final ServerLevel level) {
         final java.util.LinkedHashSet<Long> queue = WAITING.get(level.dimension());
         if (queue == null || queue.isEmpty()) {
             return;
         }
+        final long[] batch = new long[Math.min(PER_PASS, queue.size())];
+        int n = 0;
         final java.util.Iterator<Long> it = queue.iterator();
-        for (int i = 0; i < PER_PASS && it.hasNext(); i++) {
-            final ChunkPos at = new ChunkPos(it.next());
+        while (n < batch.length && it.hasNext()) {
+            batch[n++] = it.next();
             it.remove();
-            if (level.hasChunk(at.x, at.z)) {
-                try {
-                    look(level, level.getChunk(at.x, at.z));
-                } catch (final Throwable t) {
-                    Warfare.LOGGER.warn("[wall] could not look at chunk {}: {}", at, t.toString());
-                }
+        }
+        for (int i = 0; i < n; i++) {
+            final ChunkPos at = new ChunkPos(batch[i]);
+            if (!level.hasChunk(at.x, at.z)) {
+                continue;
+            }
+            try {
+                look(level, level.getChunk(at.x, at.z));
+            } catch (final Throwable t) {
+                Warfare.LOGGER.warn("[wall] could not look at chunk {}: {}", at, t.toString());
             }
         }
     }
@@ -163,9 +216,27 @@ public final class WallSurvey {
         if (!(event.getLevel() instanceof ServerLevel level)) {
             return;
         }
-        if (level.getBlockEntity(event.getPos()) instanceof IBlueprintDataProviderBE) {
-            WallRegister.unborrow(level, event.getPos());
+        try {
+            if (level.getBlockEntity(event.getPos()) instanceof IBlueprintDataProviderBE) {
+                WallRegister.unborrow(level, event.getPos());
+            }
+        } catch (final Throwable t) {
+            Warfare.LOGGER.warn("[wall] could not drop the decoration at {}: {}", event.getPos(), t.toString());
         }
+    }
+
+    /**
+     * A world was closed. The queue is keyed by dimension, and {@code minecraft:overworld} is the
+     * same key in every world there has ever been - so without this, joining a second singleplayer
+     * world inherits the first one's backlog, and a survey switched off by a bug in one world stays
+     * off in the next. Both are quiet wrongnesses rather than crashes, which is why they lasted
+     * until the crash made somebody read this file again.
+     */
+    public static void forget() {
+        WAITING.clear();
+        ticks = 0;
+        strikes = 0;
+        off = false;
     }
 
     // ------------------------------------------------------------------ the survey
