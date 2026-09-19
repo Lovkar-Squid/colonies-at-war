@@ -34,10 +34,23 @@ import java.util.List;
  */
 public final class WallLayout {
 
-    /** A segment leaving a corner starts this far along the new run. */
+    /** A segment leaving a corner starts this far along the new run. Right turns; see {@link #AFTER_INNER}. */
     public static final int AFTER_CORNER = 2;
     /** A corner closing a run sits this far past the last segment's anchor. */
     public static final int BEFORE_CORNER = 9;
+    /**
+     * A segment leaving an <b>inner</b> corner starts this far along the new run.
+     *
+     * <p>Not the convex corner's 2, and the difference is the anchor. Both pieces are six long,
+     * but the convex one is anchored in its elbow at the far end of its arms and so reaches only
+     * +1 past its anchor along the outgoing run, while the inner corner is anchored on the berm
+     * behind the angle and reaches +5. The rule is the same either way - the next piece starts one
+     * block past the corner's last - and {@code tools/check_inner.py} derives both numbers from
+     * the blueprints' own boxes and then lays an L-shaped wall to prove they tile.</p>
+     */
+    public static final int AFTER_INNER = 6;
+    /** ...and a corner closing a run into an inner corner sits this far past the last segment. */
+    public static final int BEFORE_INNER = 13;
     /** A gate stands where a segment would, but is anchored at the far end of its own run. */
     public static final int GATE_OFFSET = 6;
     /**

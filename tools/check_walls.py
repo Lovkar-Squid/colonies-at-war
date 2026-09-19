@@ -51,6 +51,7 @@ import build_war as bw
 import floatcheck
 import wallcorner
 import wallgate
+import wallinner
 import wallsegment as W
 import wallstair
 import walltower
@@ -466,6 +467,76 @@ def legs_match(out):
     return ok
 
 
+def inner_matches_section(out):
+    """The inner corner really is the same wall, cell by cell.
+
+    The convex corner gets `legs_match` because min and max are symmetric and a special case on
+    one leg would show up as an asymmetry. The concave one needs the stronger statement, because
+    its whole claim is that ONE rule - off = -min(u, v), n = max(u, v) - reproduces the section
+    everywhere, and the first draft of the design note had that rule as -max. Under -max
+    seventeen of the twenty cells of an arm come out on the wrong line of the section and the
+    piece still builds, still looks like a wall, and joins nothing. So every cell is asked.
+
+    The fittings are exempt: a banner and a lamp are the two things this piece adds on purpose,
+    and they are held to their own rule - they must be a mirror pair across the diagonal, since
+    the two arms are the same wall.
+    """
+    ok = True
+    fitting = ("wall_banner", "lantern", "decorationcontroller")
+    for level in range(1, 6):
+        s = wallinner.build(level)
+        wrong, stray = [], []
+        for u in range(wallinner.NEAR, wallinner.FAR + 1):
+            for v in range(wallinner.NEAR, wallinner.FAR + 1):
+                off, n = -min(u, v), max(u, v)
+                x, z = wallinner.place(u, v)
+                if off < W.TALUS:
+                    # the far corner of the notch is not a line of the section; nothing may be there
+                    stray += [(x, y, z) for y in range(0, W.HEAD_Y + 1) if (x, y, z) in s.blocks]
+                    continue
+                ins, outs = wallinner.leg(u, v)
+                for y in range(1, W.HEAD_Y + 1):
+                    want = W.section(n, off, y, level, ins, outs, quoin=(u == v), bays=False)
+                    got = s.blocks.get((x, y, z))
+                    if want != got and not (got and any(f in got for f in fitting)):
+                        wrong.append((u, v, y))
+        if wrong:
+            out.append(f"!! wallinner{level}: {len(wrong)} cell(s) are not what the section lays "
+                       f"there, e.g. {wrong[:4]} - is the rule still -min(u, v)?")
+            ok = False
+        if stray:
+            out.append(f"!! wallinner{level}: {len(stray)} block(s) outside the section, at {stray[:4]}")
+            ok = False
+
+        # the walk turns the other way and still has two clear cells over it
+        walk = [(u, v) for u in range(wallinner.NEAR, wallinner.FAR + 1)
+                for v in range(wallinner.NEAR, wallinner.FAR + 1) if -min(u, v) == W.MID]
+        if len(walk) != 7:
+            out.append(f"!! wallinner{level}: the walk is {len(walk)} cells, not the 7 of an L")
+            ok = False
+        for u, v in walk:
+            x, z = wallinner.place(u, v)
+            if not any((u + du, v + dv) in walk for du, dv in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                out.append(f"!! wallinner{level}: the walk cell (u={u}, v={v}) is stranded")
+                ok = False
+            if level in WALKS and any(s.blocks.get((x, y, z)) is not None for y in W.WALK):
+                out.append(f"!! wallinner{level}: the walk at (u={u}, v={v}) is blocked")
+                ok = False
+
+        # the fittings, mirrored
+        fit = sorted(wallinner.uv(x, z) + (y,) for (x, y, z), b in s.blocks.items()
+                     if b and ("wall_banner" in b or "lantern" in b))
+        if level >= 4 and not all((v, u, y) in fit for u, v, y in fit):
+            out.append(f"!! wallinner{level}: the fittings are not a mirror pair - {fit}")
+            ok = False
+
+        ax, ay, az = wallinner.ANCHOR
+        if "decorationcontroller" not in (s.blocks.get((ax, ay, az)) or ""):
+            out.append(f"!! wallinner{level}: the anchor at {wallinner.ANCHOR} is not free")
+            ok = False
+    return ok
+
+
 def section_matches_tower(out):
     """The section is the tower's, not a copy of it that has drifted."""
     ok = True
@@ -497,6 +568,7 @@ def run(verbose=True):
     out = []
     ok = section_matches_tower(out)
     ok = legs_match(out) and ok
+    ok = inner_matches_section(out) and ok
     for level in range(1, 6):
         before = len(out)
         good = straight(level, out)

@@ -5,7 +5,7 @@ issueTrackerURL="https://github.com/Lovkar-Squid/colonies-at-war/issues"
 
 [[mods]]
 modId="colonies_at_war"
-version="0.1.5"
+version="0.2.0"
 displayName="Colonies at War"
 description='''Walls your colony can actually build, towers your guards actually walk, and a War Room that hires a garrison the way the Barracks does. Wall pieces register themselves, so a colony's defences are measured exactly rather than guessed at - guards hired, military buildings, wall coverage and height, wealth. Standing between colonies falls only when somebody is caught doing something, and war is never declared by the game: a person declares it, and a peace treaty ends it. Made by Lovkar & Claude.'''
 authors="Lovkar & Claude"

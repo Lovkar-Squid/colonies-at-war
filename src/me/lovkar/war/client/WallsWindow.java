@@ -5,6 +5,7 @@ import com.ldtteam.blockui.controls.ButtonImage;
 import com.ldtteam.blockui.controls.Text;
 import com.ldtteam.blockui.views.ScrollingList;
 import com.minecolonies.core.client.gui.AbstractModuleWindow;
+import com.minecolonies.core.client.gui.WindowInfo;
 import me.lovkar.war.Warfare;
 import me.lovkar.war.colony.WallsModuleView;
 import me.lovkar.war.network.WallActionMessage;
@@ -30,6 +31,12 @@ public class WallsWindow extends AbstractModuleWindow<WallsModuleView> {
 
     public WallsWindow(final WallsModuleView view) {
         super(view, LAYOUT);
+
+        // the red "?" MineColonies puts on every hut window, here on the tab as well - the same book
+        final ButtonImage info = findPaneOfTypeByID("info", ButtonImage.class);
+        if (info != null) {
+            info.setHandler(clicked -> new WindowInfo(moduleView.getBuildingView()).open());
+        }
 
         final ScrollingList list = findPaneOfTypeByID("pieces", ScrollingList.class);
         if (list != null) {

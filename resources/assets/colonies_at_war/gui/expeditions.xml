@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd"
+        size="190 244">
+
+    <image source="minecolonies:textures/gui/builderhut/builder_paper.png" size="190 244"/>
+    <text id="title" size="150 11" pos="20 13" color="black" textalign="MIDDLE"
+          label="$(com.colonies_at_war.gui.expeditions.title)"/>
+    <button id="info" size="17 17" pos="162 10"
+            source="minecolonies:textures/gui/red_wax_information.png"
+            tooltip="$(com.minecolonies.core.building.help)"/>
+    <text id="explorer" size="168 10" pos="11 26" color="black" textalign="MIDDLE" textscale="0.8"/>
+    <text id="status" size="168 20" pos="11 36" color="black" textalign="MIDDLE" textscale="0.75"/>
+
+    <button id="recall" size="38 17" pos="11 58" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+            disabledsize="38 17"
+            label="$(com.colonies_at_war.gui.wartable.recall)"/>
+    <button id="difficulty" size="80 17" pos="53 58" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_medium.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_medium_disabled.png"
+            disabledsize="80 17"/>
+    <button id="guards" size="38 17" pos="141 58" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+            disabledsize="38 17"/>
+
+    <list id="country" size="168 154" pos="11 79"
+          emptytext="$(com.colonies_at_war.gui.expeditions.empty)" emptycolor="black">
+        <box size="100% 30" linewidth="0">
+            <text id="where" size="112 11" pos="3 2" color="black"/>
+            <text id="detail" size="112 12" pos="3 14" color="black" textscale="0.75"/>
+            <button id="go" size="38 17" pos="118 6" color="black"
+                    source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+                    disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+                    disabledsize="38 17"
+                    label="$(com.colonies_at_war.gui.expeditions.go)"/>
+        </box>
+    </list>
+</window>

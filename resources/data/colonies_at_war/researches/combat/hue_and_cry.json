@@ -1,0 +1,36 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/find_the_raiders",
+  "researchLevel": 4,
+  "sortOrder": 4,
+  "subtitle": "com.colonies_at_war.research.combat.hue_and_cry.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:warroom",
+      "level": 2
+    },
+    {
+      "type": "minecolonies:building",
+      "building": "minecolonies:guardtower",
+      "level": 3
+    }
+  ],
+  "costs": [
+    {
+      "count": 2,
+      "item": "minecraft:bell"
+    },
+    {
+      "count": 8,
+      "item": "minecraft:iron_ingot"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/huecry",
+      "level": 1
+    }
+  ],
+  "icon": "minecraft:bell"
+}

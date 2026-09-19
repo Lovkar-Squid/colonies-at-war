@@ -6,6 +6,9 @@
     <image source="minecolonies:textures/gui/builderhut/builder_paper.png" size="190 244"/>
     <text id="title" size="150 11" pos="20 13" color="black" textalign="MIDDLE"
           label="$(com.colonies_at_war.gui.walls.title)"/>
+    <button id="info" size="17 17" pos="162 10"
+            source="minecolonies:textures/gui/red_wax_information.png"
+            tooltip="$(com.minecolonies.core.building.help)"/>
     <text id="score" size="168 11" pos="11 27" color="black" textalign="MIDDLE" textscale="0.9"/>
 
     <button id="raise" size="80 17" pos="11 41" color="black"

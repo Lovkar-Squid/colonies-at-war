@@ -1,4 +1,10 @@
-# The inner corner (`wallinner`) — the geometry, worked out before any blocks are drawn
+# The inner corner (`wallinner`) — settled 14 Sep 2026
+
+The geometry below is no longer a sketch: `wallinner.py` is drawn from it and
+`check_walls.inner_matches_section` holds every cell of the piece to `wallsegment.section` at all
+five levels. The open question this note used to end on is answered, and the rule it proposed was
+wrong. Both are recorded here rather than quietly replaced, because the wrong rule is the sort
+that builds, looks like a wall, and joins nothing.
 
 ## Why mirroring does not do it
 
@@ -21,36 +27,66 @@ Compare the convex corner, where the outside is the 270° side and the town sits
 That is the whole difference, and it is why the convex piece has no blocks where the concave one
 needs them: at a concave corner the **outer** faces are on the *inside* of the elbow.
 
-## Local coordinates
+## The rule
 
 Angle at the origin, arms along **+x** (outgoing, east) and **−z** (incoming, arriving from the
-north heading south). The notch — the outside — is the **+x, −z** quadrant.
+north heading south). The notch — the outside — is the **+x, −z** quadrant. With `u = x` and
+`v = -z`, both counted positive out along their own arm:
 
-    outer face of the east arm      z = -2   for x >= 0
-    outer face of the incoming arm  x = +2   for z <= 0
+    off = -min(u, v)        distance from the wall's centre line, outward negative
+    n   =  max(u, v)        distance along this cell's own arm
 
-They meet at **(+2, −2)**, inside the notch: the wall wraps round it.
+That is the exact dual of the convex corner's `off = min(x, z)`, `n = max(x, z)`. The sign on
+`off` is the whole difference, and it is the sign because "outward" has swapped sides.
 
-With `u = x` and `v = -z` (both >= 0 into the elbow):
+### It is `min`, and the first draft of this note said `max`
 
-    east arm      n = u        off = z  = -v      ins "south"  outs "north"
-    incoming arm  n = v        off = -x = -u      ins "west"   outs "east"
-    the elbow     off = -max(u, v)   and the ornament phase is ambiguous, so **quoin it**,
-                  exactly as the convex corner quoins its diagonal
+| cell | what it is | wanted `off` | `-min` | `-max` |
+|---|---|---|---|---|
+| (x=2, z=0)  | the walk, two east of the angle | 0  | **0**  | −2 (out on the batter) |
+| (x=3, z=−1) | one course off the east arm's centre line | −1 | **−1** | −3 (not a line of the section) |
+| (x=2, z=−2) | where the two outermost lines meet | −2 | **−2** | −2 (they agree on the diagonal) |
 
-So the elbow grades from the walk at the angle out to the talus at (2, −2) by Chebyshev distance —
-the mirror image, in role, of the convex corner's `off = min(x, z)`.
+Seventeen of the twenty cells of an arm come out on the wrong line under `-max`, and none under
+`-min`. The two rules agree only on the diagonal, which is exactly the place a quick check would
+look.
 
-## The open question to settle first
+## One box, one rule — the question this note used to leave open
 
-The two arms as plain rectangles leave a diagonal notch in the **inner** faces between (0, +2) and
-(−2, 0). The convex corner avoids this by filling one 6×6 box with a single `min`/`max` rule
-rather than by unioning two rectangles. The inner corner needs the same treatment: **one box with
-one rule**, not two arms. Settle the box and the rule, then draw.
+The worry was that two arms drawn as plain rectangles would leave a diagonal notch in the **inner**
+faces between (0, +2) and (−2, 0). They would. The answer is that the piece is not two rectangles:
+it is **one 6 × 6 box** with the rule above, exactly as the convex corner is one box with `min`.
 
-## Offsets to derive (and then assert in `check_grow.py`)
+Over `u, v ∈ [−2, 3]` the rule is total, and the only cell it throws away is the far corner of the
+notch at `(u, v) = (3, 3)`, where `off` would be −3 and no such line exists — the mirror of the one
+cell the convex piece drops inside its own elbow. The inner face comes out as an unbroken L through
+`(u, v) = (−1, −1)`, and the walk as an unbroken L of seven cells through `(0, 0)`. Nothing had to
+be said about turning, in either piece.
 
-`AFTER_CORNER` / `BEFORE_CORNER` for the inner corner will NOT be the convex piece's 2 and 9,
-because the arms meet on the other side of the elbow. Derive them, then make `check_grow.py` grow
-an L-shaped wall — right turns and one left — and assert it closes on the same slots the ring
-arithmetic would give, the way the clockwise ring is already asserted.
+## What the angle gets, and what it does not
+
+**Not a bartizan.** A turret is corbelled off a projecting angle, and this angle points into the
+field. What a re-entrant angle has instead is the thing that makes bastions worth building: the two
+faces **flank each other**, so anyone at the foot of one stands in front of the other.
+
+- **the machicoulis** — at level 5 the section's own holes are left open right across the angle.
+  The convex corner fills those two cells to make its turret a solid shaft; here there is no shaft,
+  and the notch is the one place on a wall where what you drop covers both faces at once.
+- **the colours** — from level 4, a banner on the outermost line of each face. That line
+  (`off = TALUS`) exists only where both arms are at least two out, so the pair is `(u,v) = (3,2)`
+  and `(2,3)`; the third such cell, `(2,2)`, is the quoined diagonal.
+- **the light** — a lamp on the banquette rail one down each arm, at `n = 3`, a mirror pair.
+
+## The anchor
+
+`(-2, 1, 2)` — on the berm in the open elbow behind the angle, the far side from the notch. It
+cannot go where the convex corner's does: `(u, v) = (2, 2)` is on the talus here, which carries the
+batter and the buttress piers from level 4.
+
+## Still to do
+
+`AFTER_CORNER` / `BEFORE_CORNER` for a **left** turn are not the convex piece's 2 and 9, because
+the anchor sits at the near end of the arms rather than the far one: the piece runs 0 .. +5 out of
+its anchor along each arm, where the convex corner runs −4 .. +1. Derive both, then make
+`check_grow.py` grow an L-shaped wall — right turns and one left — and assert it closes on the same
+slots the ring arithmetic would give, the way the clockwise ring is already asserted.

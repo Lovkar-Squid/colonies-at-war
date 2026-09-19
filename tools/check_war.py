@@ -199,6 +199,9 @@ ok = check_ring.run() and ok
 import check_grow                                    # noqa: E402 - the planner's other way to draw
 ok = check_grow.run() and ok
 
+import check_inner                                   # noqa: E402 - and the turn it could not make
+ok = check_inner.main() == 0 and ok
+
 import check_views                                   # noqa: E402 - server class vs client view
 ok = check_views.run() and ok
 

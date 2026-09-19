@@ -1,6 +1,8 @@
 package me.lovkar.war;
 
 import com.minecolonies.api.colony.buildings.registry.BuildingEntry;
+import com.minecolonies.api.colony.jobs.registry.JobEntry;
+import com.minecolonies.core.colony.jobs.views.DefaultJobView;
 import com.minecolonies.api.items.ItemBlockHut;
 import com.minecolonies.core.colony.buildings.modules.BuildingModules;
 import com.minecolonies.apiimp.CommonMinecoloniesAPIImpl;
@@ -65,6 +67,17 @@ public class Warfare {
             DeferredRegister.create(Registries.BLOCK_ENTITY_TYPE, MODID);
     public static final DeferredRegister<BuildingEntry> BUILDINGS =
             DeferredRegister.create(CommonMinecoloniesAPIImpl.BUILDINGS, MODID);
+    public static final DeferredRegister<JobEntry> JOBS =
+            DeferredRegister.create(CommonMinecoloniesAPIImpl.JOBS, MODID);
+
+    /** The Explorer: the one person in the War Room who goes out to look rather than to fight. */
+    public static final ResourceLocation EXPLORER_JOB_ID = ResourceLocation.fromNamespaceAndPath(MODID, "explorer");
+    public static final DeferredHolder<JobEntry, JobEntry> EXPLORER_JOB = JOBS.register(EXPLORER_JOB_ID.getPath(),
+            () -> new JobEntry.Builder()
+                    .setJobProducer(me.lovkar.war.colony.JobExplorer::new)
+                    .setJobViewProducer(() -> DefaultJobView::new)
+                    .setRegistryName(EXPLORER_JOB_ID)
+                    .createJobEntry());
 
     // ------------------------------------------------------------------ the wall
 
@@ -162,6 +175,10 @@ public class Warfare {
                             .setRegistryName(WAR_ROOM_ID)
                             .addBuildingModuleProducer(WarModules.WARROOM_KNIGHT)
                             .addBuildingModuleProducer(WarModules.WARROOM_RANGER)
+                            .addBuildingModuleProducer(WarModules.EXPLORER)
+                            .addBuildingModuleProducer(WarModules.WAR_TABLE)
+                            .addBuildingModuleProducer(WarModules.EXPEDITIONS)
+                            .addBuildingModuleProducer(WarModules.CONVOY)
                             .addBuildingModuleProducer(WarModules.WALLS)
                             .addBuildingModuleProducer(BuildingModules.GUARD_SETTINGS)
                             .addBuildingModuleProducer(BuildingModules.GUARD_ENTITY_LIST)
@@ -178,7 +195,10 @@ public class Warfare {
         BLOCKS.register(modEventBus);
         ITEMS.register(modEventBus);
         BLOCK_ENTITIES.register(modEventBus);
+        JOBS.register(modEventBus);
         BUILDINGS.register(modEventBus);
+        // the warband as a MineColonies colony event - under their namespace, see WarEvents
+        me.lovkar.war.campaign.WarEvents.register(modEventBus);
         container.registerConfig(net.neoforged.fml.config.ModConfig.Type.SERVER, WarConfig.SPEC);
         modEventBus.addListener(EventPriority.HIGH, Warfare::registerCapabilities);
         modEventBus.addListener(Warfare::addToCreativeTab);
@@ -197,7 +217,18 @@ public class Warfare {
         // every singleplayer world has a minecraft:overworld.
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> me.lovkar.war.wall.WallSurvey.forget());
-        LOGGER.info("Colonies at War loaded - walls, wall towers and the War Room");
+        // the campaign clock: warbands arrive, fight, and come home on the server tick
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.campaign.Campaigns::onServerTick);
+        // the alarm bell: with the Find the Raiders research, a raided town's guards are told
+        // where the raiders are, every three seconds, and go to them
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.ai.RaidAlarm::onServerTick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.server.ServerStoppingEvent e) -> me.lovkar.war.ai.RaidAlarm.standDown());
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> me.lovkar.war.ai.RaidAlarm.forget());
+        LOGGER.info("Colonies at War loaded - walls, wall towers, the War Room and the warband");
     }
 
     /**
@@ -211,6 +242,10 @@ public class Warfare {
                 me.lovkar.war.network.WallActionMessage.TYPE,
                 me.lovkar.war.network.WallActionMessage.STREAM_CODEC,
                 me.lovkar.war.network.WallActionMessage::handle);
+        event.registrar("1").playToServer(
+                me.lovkar.war.network.WarTableMessage.TYPE,
+                me.lovkar.war.network.WarTableMessage.STREAM_CODEC,
+                me.lovkar.war.network.WarTableMessage::handle);
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {

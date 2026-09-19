@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd"
+        size="190 244">
+
+    <image source="minecolonies:textures/gui/builderhut/builder_paper.png" size="190 244"/>
+    <text id="title" size="150 11" pos="20 13" color="black" textalign="MIDDLE"
+          label="$(com.colonies_at_war.gui.convoy.title)"/>
+    <button id="info" size="17 17" pos="162 10"
+            source="minecolonies:textures/gui/red_wax_information.png"
+            tooltip="$(com.minecolonies.core.building.help)"/>
+    <text id="status" size="168 10" pos="11 26" color="black" textalign="MIDDLE" textscale="0.8"/>
+    <text id="hint" size="168 9" pos="11 36" color="black" textalign="MIDDLE" textscale="0.7"
+          label="$(com.colonies_at_war.gui.convoy.hint)"/>
+
+    <list id="manifest" size="168 72" pos="11 47"
+          emptytext="$(com.colonies_at_war.gui.convoy.empty)" emptycolor="black">
+        <box size="100% 18" linewidth="0">
+            <itemicon id="icon" size="16 16" pos="1 1"/>
+            <text id="what" size="104 9" pos="20 1" color="black" textscale="0.75"/>
+            <text id="have" size="104 8" pos="20 10" color="black" textscale="0.7"/>
+            <button id="less" size="14 15" pos="126 1" color="black" label="-"
+                    source="minecolonies:textures/gui/builderhut/builder_button_mini.png"/>
+            <button id="more" size="14 15" pos="142 1" color="black" label="+"
+                    source="minecolonies:textures/gui/builderhut/builder_button_mini.png"/>
+        </box>
+    </list>
+
+    <text id="find" size="26 11" pos="15 125" color="black" textscale="0.8"
+          label="$(com.colonies_at_war.gui.convoy.find)"/>
+    <input id="search" size="76 14" pos="41 123" maxlength="32"/>
+    <button id="clear" size="56 17" pos="123 121" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+            disabledsize="56 17"
+            label="$(com.colonies_at_war.gui.convoy.clear)"/>
+
+    <list id="items" size="168 94" pos="11 141" emptytext="$(com.colonies_at_war.gui.convoy.nothing_found)" emptycolor="black">
+        <box size="100% 18" linewidth="0">
+            <itemicon id="icon" size="16 16" pos="1 1"/>
+            <text id="name" size="104 11" pos="20 4" color="black" textscale="0.8"/>
+            <button id="load" size="30 15" pos="126 1" color="black"
+                    source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+                    label="$(com.colonies_at_war.gui.convoy.load)"/>
+        </box>
+    </list>
+</window>

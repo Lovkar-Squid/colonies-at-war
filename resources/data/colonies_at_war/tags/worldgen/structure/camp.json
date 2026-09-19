@@ -1,0 +1,22 @@
+{
+  "replace": false,
+  "values": [
+    {
+      "id": "minecolonies:barbarian_camp",
+      "required": false
+    },
+    {
+      "id": "minecolonies:amazon_camp",
+      "required": false
+    },
+    {
+      "id": "minecolonies:desert_camp",
+      "required": false
+    },
+    {
+      "id": "minecolonies:ship",
+      "required": false
+    },
+    "minecraft:pillager_outpost"
+  ]
+}

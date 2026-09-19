@@ -51,16 +51,47 @@ public class BuildingWarRoom extends AbstractBuildingGuards {
             case 5 -> 12;
             default -> 0;
         };
-        return byLevel == 0 ? 0 : byLevel + WarResearch.extra(building, WarResearch.DRILL);
+        return byLevel == 0 ? 0 : byLevel + WarResearch.extra(building, WarResearch.DRILL) + explorersHired(building);
     }
 
-    /** Half the garrison, rounded up, may be knights; the rest are shot. Keeps a warband mixed. */
-    public static int knights(final IBuilding building) {
-        return (garrison(building) + 1) / 2;
+    /** How many explorers the room may keep: one, as soon as it stands. */
+    public static int explorers(final IBuilding building) {
+        return building.getBuildingLevel() == 0 ? 0 : 1;
     }
 
-    public static int rangers(final IBuilding building) {
-        return garrison(building) / 2;
+    /**
+     * The explorers actually hired. A guard building's hiring limit is combined across every
+     * citizen it has, so without this an explorer would take a soldier's place.
+     */
+    public static int explorersHired(final IBuilding building) {
+        int hired = 0;
+        try {
+            for (final com.minecolonies.core.colony.buildings.modules.WorkerBuildingModule module
+                    : building.getModulesByType(com.minecolonies.core.colony.buildings.modules.WorkerBuildingModule.class)) {
+                if (module.getJobEntry() == me.lovkar.war.Warfare.EXPLORER_JOB.get()) {
+                    hired += module.getAssignedCitizen().size();
+                }
+            }
+        } catch (final Throwable ignored) {
+            // no modules to read: no explorer
+        }
+        return hired;
+    }
+
+    /** The explorer, if one is hired, whether or not he is at home. */
+    public static com.minecolonies.api.colony.ICitizenData explorer(final IBuilding building) {
+        try {
+            for (final com.minecolonies.core.colony.buildings.modules.WorkerBuildingModule module
+                    : building.getModulesByType(com.minecolonies.core.colony.buildings.modules.WorkerBuildingModule.class)) {
+                if (module.getJobEntry() == me.lovkar.war.Warfare.EXPLORER_JOB.get()
+                        && !module.getAssignedCitizen().isEmpty()) {
+                    return module.getAssignedCitizen().get(0);
+                }
+            }
+        } catch (final Throwable ignored) {
+            // no modules to read: no explorer
+        }
+        return null;
     }
 
     @Override

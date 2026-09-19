@@ -20,8 +20,22 @@ import net.minecraft.core.Direction;
 public enum WallKind {
     /** A straight run. The one that gets laid dozens of times. */
     SEGMENT("wallsegment", 8),
-    /** Turns the run ninety degrees. Six long, so the buttress rhythm stays on its four-grid. */
+    /** Turns the run ninety degrees to the RIGHT. Six long, so the buttress rhythm stays on its four-grid. */
     CORNER("wallcorner", 6),
+    /**
+     * Turns it ninety degrees to the <b>left</b> - the re-entrant, concave corner.
+     *
+     * <p>Walk any of these walls with the outside on your left and the town on your right and a
+     * right turn is {@link #CORNER}. A town that is not a rectangle - an L, a bay round a lake,
+     * a notch cut for somebody else's claim - needs the other one, and mirroring {@code CORNER}
+     * does not give it: the pieces are drawn with the outside on the left of the run, so a
+     * mirrored corner is a ring laid anticlockwise, not a corner that turns the other way.</p>
+     *
+     * <p>Same six blocks as {@code CORNER}, and the same section throughout, but its anchor sits
+     * at the NEAR end of its arms rather than the far one - so it does not share the corner's
+     * layout offsets. See {@link WallLayout#AFTER_INNER} and {@link WallLayout#BEFORE_INNER}.</p>
+     */
+    INNER("wallinner", 6),
     /** A way through: an arch, doors a citizen can path through, and the walk carried over. */
     GATE("wallgate", 8),
     /**

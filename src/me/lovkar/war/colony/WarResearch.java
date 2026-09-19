@@ -29,6 +29,10 @@ public final class WarResearch {
     public static final ResourceLocation WATCHMEN = effect("watchmen");
     /** Fraction added to what a colony's walls are worth. */
     public static final ResourceLocation MASONRY = effect("masonry");
+    /** Guards are told where the raiders are while a raid is on; see {@code ai.RaidAlarm}. */
+    public static final ResourceLocation FIND_RAIDERS = effect("findraiders");
+    /** The second bell: posted guards leave their posts for any raider within earshot; see {@code ai.RaidAlarm}. */
+    public static final ResourceLocation HUE_AND_CRY = effect("huecry");
 
     private WarResearch() {
     }

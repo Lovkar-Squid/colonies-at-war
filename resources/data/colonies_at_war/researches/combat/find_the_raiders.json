@@ -1,0 +1,36 @@
+{
+  "branch": "minecolonies:combat",
+  "parentResearch": "colonies_at_war:combat/standing_army",
+  "researchLevel": 3,
+  "sortOrder": 3,
+  "subtitle": "com.colonies_at_war.research.combat.find_the_raiders.subtitle",
+  "requirements": [
+    {
+      "type": "minecolonies:single-building",
+      "building": "colonies_at_war:warroom",
+      "level": 1
+    },
+    {
+      "type": "minecolonies:building",
+      "building": "minecolonies:guardtower",
+      "level": 2
+    }
+  ],
+  "costs": [
+    {
+      "count": 4,
+      "item": "minecraft:compass"
+    },
+    {
+      "count": 16,
+      "item": "minecraft:torch"
+    }
+  ],
+  "effects": [
+    {
+      "id": "colonies_at_war:effects/findraiders",
+      "level": 1
+    }
+  ],
+  "icon": "minecraft:compass"
+}

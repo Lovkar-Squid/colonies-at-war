@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<window xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:noNamespaceSchemaLocation="https://raw.githubusercontent.com/ldtteam/BlockUI/version/main/src/main/resources/assets/blockui/gui/block_ui.xsd"
+        size="190 244">
+
+    <image source="minecolonies:textures/gui/builderhut/builder_paper.png" size="190 244"/>
+    <text id="title" size="150 11" pos="20 13" color="black" textalign="MIDDLE"
+          label="$(com.colonies_at_war.gui.wartable.title)"/>
+    <button id="info" size="17 17" pos="162 10"
+            source="minecolonies:textures/gui/red_wax_information.png"
+            tooltip="$(com.minecolonies.core.building.help)"/>
+    <text id="state" size="168 10" pos="11 25" color="black" textalign="MIDDLE" textscale="0.8"/>
+    <text id="warband" size="168 14" pos="11 34" color="black" textalign="MIDDLE" textscale="0.7" wrap="true"/>
+    <text id="held" size="168 10" pos="11 48" color="black" textalign="MIDDLE" textscale="0.8"/>
+
+    <button id="recall" size="38 17" pos="11 58" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+            disabledsize="38 17"
+            label="$(com.colonies_at_war.gui.wartable.recall)"/>
+    <button id="ransom" size="38 17" pos="53 58" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+            disabledsize="38 17"
+            label="$(com.colonies_at_war.gui.wartable.ransom)"/>
+    <button id="hire" size="38 17" pos="95 58" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+            disabledsize="38 17"
+            label="$(com.colonies_at_war.gui.wartable.hire)"/>
+    <button id="guards" size="38 17" pos="137 58" color="black"
+            source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+            disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+            disabledsize="38 17"/>
+
+    <list id="targets" size="168 116" pos="11 79"
+          emptytext="$(com.colonies_at_war.gui.wartable.empty)" emptycolor="black">
+        <box size="100% 46" linewidth="0">
+            <text id="who" size="112 11" pos="3 2" color="black"/>
+            <text id="detail" size="112 9" pos="3 13" color="black" textscale="0.75"/>
+            <text id="detail2" size="112 9" pos="3 23" color="black" textscale="0.75"/>
+            <text id="detail3" size="112 9" pos="3 33" color="black" textscale="0.75"/>
+            <button id="march" size="38 17" pos="118 3" color="black"
+                    source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+                    disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+                    disabledsize="38 17"
+                    label="$(com.colonies_at_war.gui.wartable.march)"/>
+            <button id="deal" size="38 17" pos="118 24" color="black"
+                    source="minecolonies:textures/gui/builderhut/builder_button_small.png"
+                    disabled="minecolonies:textures/gui/builderhut/builder_button_small_disabled.png"
+                    disabledsize="38 17"/>
+        </box>
+    </list>
+
+    <list id="log" size="168 40" pos="11 196" emptytext="" emptycolor="black">
+        <box size="100% 20" linewidth="0">
+            <text id="line" size="156 20" pos="1 0" color="black" textscale="0.7" wrap="true"/>
+        </box>
+    </list>
+</window>

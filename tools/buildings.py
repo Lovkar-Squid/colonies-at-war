@@ -12,7 +12,7 @@ TWO KINDS OF THING, and the difference is the anchor.
                 block entity behind it, and they hire men: every one of them owes as many bunks as
                 WarModules gives it, and the ones that carry MineColonies' BED module owe REAL
                 beds a citizen can walk to.
-  decorations   the four wall pieces. No hut block, no crew, no beds - a colony does not staff
+  decorations   the five wall pieces. No hut block, no crew, no beds - a colony does not staff
                 a wall, it builds one. They are anchored on minecolonies:decorationcontroller, which
                 is what MineColonies' own wall blueprints use, and their level is read out of the
                 digits of the file name, so wallsegment1..5 upgrade in place exactly the way a hut
@@ -23,6 +23,7 @@ about a wall piece is what it does when it meets another one.
 """
 import wallcorner
 import wallgate
+import wallinner
 import wallsegment
 import wallstair
 import walltower
@@ -52,9 +53,10 @@ SPEC = {
                       beds_required=True),           # BuildingModules.BED: one real bed per man
     "wallsegment": deco(wallsegment),
     "wallcorner":  deco(wallcorner),
+    "wallinner":   deco(wallinner),
     "wallgate":    deco(wallgate),
     "wallstair":   deco(wallstair),
 }
 
 ALL = {name: spec["module"] for name, spec in SPEC.items()}
-WALLS = ("wallsegment", "wallcorner", "wallgate", "wallstair")
+WALLS = ("wallsegment", "wallcorner", "wallinner", "wallgate", "wallstair")
