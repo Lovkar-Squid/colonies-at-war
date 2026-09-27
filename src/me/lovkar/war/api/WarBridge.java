@@ -62,7 +62,7 @@ public final class WarBridge {
      * Something was done to them and they know who did it.
      *
      * <p>This is the only way standing ever falls, and the thief calls it only when his man was
-     * <b>caught or seen</b>. A clean job never reaches this method, which is Marko's first rule
+     * <b>caught or seen</b>. A clean job never reaches this method, which is Lovkar's first rule
      * expressed as a call that does not happen.</p>
      */
     public static void offend(final IColony mine, final int theirs, final int amount, final String why) {

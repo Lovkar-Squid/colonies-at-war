@@ -5,7 +5,7 @@ import net.neoforged.neoforge.common.ModConfigSpec;
 /**
  * How much war this server wants.
  *
- * <p>Marko's call, and the right one: <b>all three depths ship, and the server chooses which is
+ * <p>Lovkar's call, and the right one: <b>all three depths ship, and the server chooses which is
  * active.</b> A skirmish is a report and a bruise; a siege breaks walls and takes prisoners; a
  * conquest moves borders. One setting, and nobody has to install a different mod to play at a
  * different intensity.</p>
