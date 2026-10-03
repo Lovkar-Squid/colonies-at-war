@@ -6,6 +6,9 @@ import com.minecolonies.core.colony.jobs.views.DefaultJobView;
 import com.minecolonies.api.items.ItemBlockHut;
 import com.minecolonies.core.colony.buildings.modules.BuildingModules;
 import com.minecolonies.apiimp.CommonMinecoloniesAPIImpl;
+import com.minecolonies.api.sounds.EventType;
+import com.minecolonies.api.sounds.ModSoundEvents;
+import com.minecolonies.api.util.Tuple;
 import me.lovkar.war.block.BlockHutWallTower;
 import me.lovkar.war.block.BlockHutWarRoom;
 import me.lovkar.war.block.WarTileEntity;
@@ -17,6 +20,7 @@ import me.lovkar.war.wall.RampartBlock;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.sounds.SoundEvent;
 import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.level.block.Block;
@@ -27,6 +31,7 @@ import net.minecraft.world.level.material.MapColor;
 import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.capabilities.Capabilities;
 import net.neoforged.neoforge.capabilities.RegisterCapabilitiesEvent;
 import net.neoforged.neoforge.event.BuildCreativeModeTabContentsEvent;
@@ -36,6 +41,9 @@ import net.neoforged.neoforge.registries.DeferredItem;
 import net.neoforged.neoforge.registries.DeferredRegister;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Colonies at War - walls you can build, towers your guards walk, and a room where the marching
@@ -203,6 +211,7 @@ public class Warfare {
         modEventBus.addListener(EventPriority.HIGH, Warfare::registerCapabilities);
         modEventBus.addListener(Warfare::addToCreativeTab);
         modEventBus.addListener(Warfare::registerPayloads);
+        modEventBus.addListener(FMLCommonSetupEvent.class, event -> event.enqueueWork(Warfare::lendVoiceLines));
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(WarCommands::register);
         // Somebody else's wall: a style pack's walls/ decoration is found where it stands, taken
         // in when its chunk loads and dropped when it is gone. See WallSurvey for why this is a
@@ -246,6 +255,26 @@ public class Warfare {
                 me.lovkar.war.network.WarTableMessage.TYPE,
                 me.lovkar.war.network.WarTableMessage.STREAM_CODEC,
                 me.lovkar.war.network.WarTableMessage::handle);
+    }
+
+    /**
+     * MineColonies looks citizen voice lines up by job path and crashes the server tick for a job
+     * it has no entry for: in 0.2.0 a player who bumped into an Explorer took the game down with
+     * him. The Explorer wears the Courier's clothes and speaks with the Courier's lines, falling
+     * back to the unemployed citizen's if that map is ever missing. A job of that name that
+     * already has lines of its own keeps them.
+     */
+    private static void lendVoiceLines() {
+        final Map<String, Map<EventType, List<Tuple<SoundEvent, SoundEvent>>>> voices = ModSoundEvents.CITIZEN_SOUND_EVENTS;
+        final Map<EventType, List<Tuple<SoundEvent, SoundEvent>>> lines =
+                voices.containsKey("deliveryman") ? voices.get("deliveryman") : voices.get("unemployed");
+        if (lines == null) {
+            LOGGER.warn("No citizen voice lines found to lend to the Explorer");
+            return;
+        }
+        if (voices.putIfAbsent(EXPLORER_JOB_ID.getPath(), lines) == null) {
+            LOGGER.info("Explorers speak with the Courier's voice lines");
+        }
     }
 
     private static void registerCapabilities(RegisterCapabilitiesEvent event) {
