@@ -24,6 +24,10 @@ public class BuildingWarRoom extends AbstractBuildingGuards {
 
     public BuildingWarRoom(final IColony colony, final BlockPos pos) {
         super(colony, pos);
+        // The first patrol point MineColonies picks is wherever one of the building's citizens was
+        // last seen. That can be the Explorer, back from far away or never seen at all (0, 0, 0),
+        // and a point nobody reaches is a patrol that never starts. Start at the hut instead.
+        tempNextPatrolPoint = pos;
     }
 
     @Override
@@ -97,6 +101,24 @@ public class BuildingWarRoom extends AbstractBuildingGuards {
     @Override
     public int getClaimRadius(final int level) {
         return level >= 4 ? 1 : 0;
+    }
+
+    /**
+     * Patrol the way MineColonies' own Guard Tower does: with no patrol points of the player's,
+     * every guard walks his own rounds through the town; with manual points, or a point somebody
+     * set (the alarm bell, a guard back at work), the garrison walks the points together.
+     *
+     * <p>Left to {@link AbstractBuildingGuards}, the War Room patrolled like the Barracks: the whole
+     * garrison walking to one point and on to the next only once every citizen of the building had
+     * arrived. The Explorer is one of those citizens and never arrives, and neither does a man away
+     * on a campaign, so each point waited for the colony's slow tick, 25 seconds; and a point out of
+     * the room's patrol range is replaced by the hut, so with the town's buildings further away the
+     * point was the hut itself, every time. The garrison stood at the hut block.</p>
+     */
+    @Override
+    public boolean requiresManualTarget() {
+        return (patrolTargets == null || patrolTargets.isEmpty() || tempNextPatrolPoint != null || !shallPatrolManually())
+                && tempNextPatrolPoint == null;
     }
 
     /**
