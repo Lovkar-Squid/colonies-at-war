@@ -129,8 +129,10 @@ Waking World's own consequences); a sack costs the same again, three days of ang
 `tierFor`, so a kingdom sacked often enough shrinks.
 
 **Reprisals.** A kingdom has no War Room, so the mod keeps its clock: every attack writes a
-`Reprisal` (kingdom, colony, due, expires, size, strength) into the same SavedData; a second attack
-folds into it (bigger, not a second raid). Due after `reprisalDays` (half that for a sack),
+`Reprisal` (kind, kingdom, colony, due, expires, size, strength) into the same SavedData; a second
+attack folds into it (bigger, not a second raid). Since 0.3.0 a camp or a village writes one too
+(`kind` camp or village; see "Strike back" under camps and villages); a save without `kind` is a
+kingdom's, so a 0.2.2 world's debts load as they were. Due after `reprisalDays` (half that for a sack),
 `size = 2 + tier*2 + catapults` (+`tier*2` for a sack, 3..16), strength at least the kingdom's
 defence. It is paid only when the colony is ACTIVE and loaded — a raid nobody sees is not revenge —
 as an `ArmyRaidEvent` with `attacker = 0`, `attackerName` the kingdom's, `campaign = -id` (its
@@ -170,8 +172,8 @@ structure start's bounding box - **by chunk** (`startsForStructure(ChunkPos)`), 
 nearest-structure search hands back a position at y = 0 and `getStructureAt` wants the block
 inside the box. A warband that overruns a camp smashes every spawner in it - the camp goes quiet
 for good - and rolls `plunder/camp`; a village (`max(20, 12 + golems*15 + guards*villageGuardWeight
-+ folk*2 + armed*3)`, the weight 12 by default) only yields `plunder/village`. Nobody holds either
-against anybody.
++ folk*2 + armed*3)`, the weight 12 by default) only yields `plunder/village`. Until 0.3.0 nobody
+held either against anybody; now both strike back (below).
 
 A village's guards fight back (`Campaigns.fightGuards`, the numbers in `Battle.guardsFell` and
 `Battle.lostToGuards`). Of the guards, `round(had * (0.5 + 0.5*margin))`, one at least, fall when
@@ -185,6 +187,32 @@ village's reprisal. Guard Villagers puts guards of its own into a village it see
 that mod installed most villages already have several: a plains village on the rig came to 117 with
 its own 6. Note the rig runs with
 `generate-structures=false` by default; `camprun.sh` turns it on.
+
+**Strike back** (0.3.0). An attack on a camp or a village, won or lost, writes a `Reprisal` of kind
+`camp` or `village` in `arriveAtPlace`, the same record and the same clock as a kingdom's: due after
+`reprisalDays` (half for a sack), forgotten a week after that if never paid, paid only when the
+colony is ACTIVE and loaded and `siegeInWorld` is on (with it off, a place's debt, like a kingdom's,
+is never paid and runs out). Its men are `round(defence/8) + hit + 2*guards`, clamped 3..16:
+`defence` is the place's at the moment of the attack, `hit` a man for each spawner smashed, for
+every two plunder rolls of a sack (`Plunder.rolls`, the same count the loot table was rolled) and
+for each of its Guard Villagers' guards who fell, and `guards` the
+guards who lived through it (`villageGuards - villageGuardsFell`, a village only), who lead the
+answer. Strength `max(size*4, defence + hit*4)`. The debt is keyed on the colony, the kind and the
+place's anchor (`Places.anchor`, the middle of its structure start's box, so two attacks on one
+village from different houses are one village): a second attack folds into it, `size =
+min(16, max(new, old + max(1, new/2)))`, strength `old + new/2` at least, the earlier due day, the
+debt's id kept. Paid, it is an `ArmyRaidEvent` like a kingdom's (`attacker = 0`, `campaign = -id`)
+with `attackerName` "the Ogre Outpost", and `answering(kind, title, guarded)`: the raid is called
+"Raiders of the Ogre Outpost" or "Militia of the Village", its captain's raid kind is `raiders` or
+`militia` ("Captain Aldric of the Ogre Outpost leads the raiders of the Ogre Outpost against
+Ironhold!", banners black with a red saltire and white with blue), and a guard-led militia's men are
+put in iron armour with a shield (none of it drops) when they register and again on every update,
+so their captain comes out in diamond, a tier above them. The end goes through `reprisalEnded` like
+a kingdom's: goods carried off when half of them stand at dawn, the wall breached from the place's
+side. `placesStrikeBack` (on) turns it off. `/war targets` ends with "owed: the Ogre Outpost will
+come for you in 2 days - 7 soldiers", `/war status` lists the debt, and the War Table writes the
+same line under the place's row (a place that owes and is not the nearest of its kind gets a row of
+its own); a kingdom's debt is written under the kingdom's row.
 
 ## Veterans and captives
 
@@ -344,7 +372,7 @@ the alliance broken to nothing; everything saved and read back.
 ## Captains — one man at the head of every raid (0.3.0)
 
 `campaign/Captains`. Every `IColonyRaidEvent` with men in the world gets one captain: the warband,
-a kingdom's reprisal, MineColonies' barbarians, pirates (on the ground, by ship, drowned),
+a kingdom's or a place's reprisal, MineColonies' barbarians, pirates (on the ground, by ship, drowned),
 Egyptians, Norsemen and Amazons, and whatever raid another mod adds. Nothing hooks into a raid —
 MineColonies' events are theirs, and a mixin into each would break every month — so twice a second
 each colony's events are copied and looked at from outside, the way `RaidAlarm` finds raiders.
