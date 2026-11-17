@@ -190,10 +190,11 @@ public final class Places {
 
     /**
      * What stands against a warband there. A camp is its spawners, five apiece over a base of
-     * twenty, and its armed men, three apiece, whatever mod they come from; a village is its iron
-     * golems (fifteen), Guard Villagers' guards ({@link WarConfig#villageGuardWeight()}, twelve by
-     * default), its armed men (three) and its people (two). Neither is a kingdom: a large barbarian
-     * camp with eight spawners comes to sixty, a hamlet to about thirty.
+     * twenty, and its armed men, three apiece, whatever mod they come from (a Guard Villagers guard
+     * who stands in a camp is one of them); a village is its iron golems (fifteen), Guard Villagers'
+     * guards ({@link WarConfig#villageGuardWeight()}, twelve by default), its armed men (three) and
+     * its people (two). Neither is a kingdom: a large barbarian camp with eight spawners comes to
+     * sixty, a hamlet to about thirty.
      */
     public static int defence(final ServerLevel level, final Place place) {
         return defence(level, place, defenders(level, place));
@@ -202,7 +203,7 @@ public final class Places {
     /** The same, from defenders already counted. */
     public static int defence(final ServerLevel level, final Place place, final Defenders d) {
         if (place.isCamp()) {
-            return 20 + spawnersIn(level, place, false) * 5 + d.armed() * 3;
+            return 20 + spawnersIn(level, place, false) * 5 + (d.armed() + d.guards()) * 3;
         }
         return Math.max(20, 12 + d.golems() * 15 + d.guards() * WarConfig.villageGuardWeight() + d.folk() * 2 + d.armed() * 3);
     }

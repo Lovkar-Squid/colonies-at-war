@@ -164,7 +164,8 @@ Villagers' guard (entity type `guardvillagers:guard`, looked up with `getOptiona
 registry defaults to the pig), iron golem, armed (`Enemy`, or a main-hand bow or crossbow or an
 item whose attribute modifiers add attack damage, which covers other mods' weapons), folk (not
 `Enemy`, `Animal`, `WaterAnimal`, `AmbientCreature` or `AbstractGolem`: villagers, kobolds,
-dwarves). A camp's defence is `20 + spawners*5 + armed*3`; the spawners are counted by walking the
+dwarves). A camp's defence is `20 + spawners*5 + armed*3`, a guard who stands in a camp counted as
+armed; the spawners are counted by walking the
 structure start's bounding box - **by chunk** (`startsForStructure(ChunkPos)`), because the
 nearest-structure search hands back a position at y = 0 and `getStructureAt` wants the block
 inside the box. A warband that overruns a camp smashes every spawner in it - the camp goes quiet

@@ -21,6 +21,10 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.ChunkPos;
 import net.minecraft.world.level.GameRules;
 import net.minecraft.world.level.chunk.ChunkGenerator;
@@ -96,6 +100,8 @@ public final class TargetGate {
     private IColony colony;
     private BlockPos center;
     private Places.Place village;
+    /** The placed Valarian bandit camp, where the armed are counted. */
+    private Places.Place bandits;
     /** The guards standing in the village when the warband comes: Guard Villagers' own and ours. */
     private int guardsThere;
     private Campaigns.Campaign campaign;
@@ -129,6 +135,7 @@ public final class TargetGate {
                 place();
             } else if (tick == COUNT) {
                 guards();
+                armed();
             } else if (tick == MARCH) {
                 march();
             } else if (tick > MARCH && tick % 10 == 0 && campaign != null && campaign.phase != Campaigns.Phase.MARCHING) {
@@ -274,7 +281,7 @@ public final class TargetGate {
                     village != null && Places.VILLAGE.equals(village.kind()) && "Village".equals(village.name()),
                     village == null ? "nothing" : village.kind() + " '" + village.name() + "' " + village.structure());
         }
-        camp("valarian_conquest:bandit_camp", BANDITS_AT, "Bandit Camp");
+        bandits = camp("valarian_conquest:bandit_camp", BANDITS_AT, "Bandit Camp");
         if (ModList.get().isLoaded("ifcintegrations")) {
             camp("ifcintegrations:goblin_camp", GOBLINS_AT, "Goblin Camp");
         } else {
@@ -289,17 +296,18 @@ public final class TargetGate {
         check("colony created", colony != null, colony == null ? "none" : "id " + colony.getID());
     }
 
-    private void camp(final String id, final ChunkPos near, final String name) {
+    private Places.Place camp(final String id, final ChunkPos near, final String name) {
         final StructureStart start = build(id, near);
         check(id + " is placed", start != null, "");
         if (start == null) {
-            return;
+            return null;
         }
         final Places.Place camp = Places.at(level, heart(start));
         check("Places reads the placed " + id + " as a camp named '" + name + "'",
                 camp != null && camp.isCamp() && name.equals(camp.name()) && id.equals(String.valueOf(camp.structure())),
                 camp == null ? "nothing" : camp.kind() + " '" + camp.name() + "' " + camp.structure() + ", defence "
                         + Places.defence(level, camp) + ", title " + camp.title());
+        return camp;
     }
 
     // ------------------------------------------------------------------ the guards
@@ -336,6 +344,41 @@ public final class TargetGate {
                 with > without && (without > 20 ? with - without == GUARDS * WarConfig.villageGuardWeight()
                         : with >= 12 + GUARDS * WarConfig.villageGuardWeight()),
                 without + " without guards, " + with + " with " + GUARDS);
+    }
+
+    /**
+     * A camp counts whoever is armed in it, whatever mod he comes from: a villager handed an iron
+     * sword (no hostile mob, so only the weapon makes him one), an empty-handed vindicator (hostile)
+     * and one of Guard Villagers' guards each add three; a cow adds nothing.
+     */
+    private void armed() {
+        if (bandits == null) {
+            check("a camp to count the armed in", false, "none placed");
+            return;
+        }
+        final Places.Defenders before = Places.defenders(level, bandits);
+        final int without = Places.defence(level, bandits, before);
+        final BlockPos at = level.getHeightmapPos(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, bandits.pos());
+        final Mob smith = EntityType.VILLAGER.create(level);
+        smith.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        final EntityType<?> guardType = Places.villageGuardType();
+        final Entity[] newcomers = {smith, EntityType.VINDICATOR.create(level), EntityType.COW.create(level),
+                guardType == null ? null : guardType.create(level)};
+        int spawned = 0;
+        for (int i = 0; i < newcomers.length; i++) {
+            if (newcomers[i] != null) {
+                newcomers[i].moveTo(at.getX() + 0.5 + i, at.getY(), at.getZ() + 0.5, 0f, 0f);
+                if (level.addFreshEntity(newcomers[i])) {
+                    spawned++;
+                }
+            }
+        }
+        final Places.Defenders after = Places.defenders(level, bandits);
+        final int with = Places.defence(level, bandits, after);
+        check("a camp counts its armed whatever they are (a villager with a sword, a vindicator, a village guard; not a cow)",
+                spawned == newcomers.length && after.armed() == before.armed() + 2 && after.guards() == before.guards() + 1
+                        && with - without == 3 * 3,
+                "spawned " + spawned + ", before " + before + " (" + without + "), after " + after + " (" + with + ")");
     }
 
     // ------------------------------------------------------------------ the warband
