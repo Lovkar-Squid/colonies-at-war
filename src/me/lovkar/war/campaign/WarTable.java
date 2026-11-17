@@ -65,10 +65,16 @@ public final class WarTable {
         return found;
     }
 
-    /** Everything a warband could march on from this colony, nearest first. */
+    /**
+     * Everything a warband could march on from this colony, nearest first. A kingdom, a camp or a
+     * village that owes the colony a reprisal says so on its line ("the Ogre Outpost will come for
+     * you in 2 days"); a place that owes one and is not the nearest of its kind gets a line of its own.
+     */
     public static List<Target> targets(final ServerLevel level, final IColony mine) {
         final List<Target> out = new ArrayList<>();
         final BlockPos home = mine.getCenter();
+        final long now = level.getServer().overworld().getGameTime();
+        final List<Campaigns.Reprisal> owed = new ArrayList<>(Campaigns.reprisalsFor(level, mine.getID()));
         for (final IColony colony : IColonyManager.getInstance().getColonies(level)) {
             if (colony.getID() == mine.getID()) {
                 continue;
@@ -89,16 +95,38 @@ public final class WarTable {
             final String convoy = Campaigns.cannotConvoyTo(level, mine, kingdom);
             out.add(new Target("kingdom", 0, centre, Kingdoms.name(kingdom) + " (kingdom)",
                     (int) Math.sqrt(centre.distSqr(home)), Expeditions.direction(home, centre), Kingdoms.defence(kingdom),
-                    Kingdoms.standing(kingdom), false, brief(no), "", "", false, convoy == null ? "" : brief(convoy), ""));
+                    Kingdoms.standing(kingdom), false, brief(no), "", "", false, convoy == null ? "" : brief(convoy),
+                    owes(owed, Campaigns.Reprisal.KINGDOM, centre, now)));
         }
-        for (final Places.Place place : places(level, mine)) {
+        final List<Places.Place> places = new ArrayList<>(places(level, mine));
+        // a place's middle is read from its structure start, which can load a chunk: only when a place owes us
+        final boolean placesOwe = owed.stream().anyMatch(r -> !r.onKingdom());
+        for (final Campaigns.Reprisal r : owed) {
+            if (!r.onKingdom() && places.stream().noneMatch(p -> p.kind().equals(r.kind) && Places.anchor(level, p).equals(r.place))) {
+                final Places.Place place = Places.at(level, r.place);
+                if (place != null) {
+                    places.add(place);
+                }
+            }
+        }
+        for (final Places.Place place : places) {
             final String no = Campaigns.cannotMarchOnPlace(level, mine, place);
             out.add(new Target(place.kind(), 0, place.pos(), place.name(), (int) Math.sqrt(place.pos().distSqr(home)),
                     Expeditions.direction(home, place.pos()), Places.defence(level, place), 0, false, brief(no), "", "", false,
-                    "no road for a convoy", ""));
+                    "no road for a convoy", placesOwe ? owes(owed, place.kind(), Places.anchor(level, place), now) : ""));
         }
         out.sort((a, b) -> Integer.compare(a.distance(), b.distance()));
         return out;
+    }
+
+    /** "the Ogre Outpost will come for you in 2 days", when the kingdom or the place at this position owes us one; "" otherwise. */
+    private static String owes(final List<Campaigns.Reprisal> owed, final String kind, final BlockPos at, final long now) {
+        for (final Campaigns.Reprisal r : owed) {
+            if (r.kind.equals(kind) && r.from().equals(at)) {
+                return r.owed(now);
+            }
+        }
+        return "";
     }
 
     /**

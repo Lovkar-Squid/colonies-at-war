@@ -77,7 +77,7 @@ import java.util.UUID;
  * Every raid on a colony is led by somebody.
  *
  * <p>MineColonies' raids - barbarians, pirates, Egyptians, Norsemen, Amazons, the drowned - and this
- * mod's own warbands and kingdom reprisals all get one captain per raid: the raid's chief when it
+ * mod's own warbands and reprisals all get one captain per raid: the raid's chief when it
  * brought one, otherwise its first ordinary fighting man, promoted. He has a name, better gear than
  * his men, more health, a red bar over the screen of anybody within 64 blocks of him, and when a
  * player or a colony guard kills him he leaves something behind to hang on a wall.</p>
@@ -148,6 +148,10 @@ public class Captains extends SavedData {
         WARBAND("warband"),
         /** A kingdom's men (a reprisal), or anybody else this mod sends who is not a colony. */
         ARMY("army"),
+        /** A camp's survivors come for the colony that attacked it. */
+        RAIDERS("raiders"),
+        /** A village's survivors (its guards at the head, where Guard Villagers' stood) come for the colony. */
+        MILITIA("militia"),
         /** A raid nobody here has heard of, with raiders nobody here recognises. */
         OTHER("other");
 
@@ -173,6 +177,12 @@ public class Captains extends SavedData {
         /** Somebody else's raid, by MineColonies' own event id, or by what its men are. */
         static Raid of(final IColonyRaidEvent event, final LivingEntity man) {
             if (event instanceof ArmyRaidEvent army) {
+                if (Places.CAMP.equals(army.kind())) {
+                    return RAIDERS;
+                }
+                if (Places.VILLAGE.equals(army.kind())) {
+                    return MILITIA;
+                }
                 return army.campaign() < 0 || army.attacker() == 0 ? ARMY : WARBAND;
             }
             final String path;
@@ -227,7 +237,7 @@ public class Captains extends SavedData {
                 case EGYPTIAN -> EGYPTIAN_NAMES;
                 case NORSE -> NORSE_NAMES;
                 case AMAZON -> AMAZON_NAMES;
-                case WARBAND, ARMY -> ARMY_NAMES;
+                case WARBAND, ARMY, RAIDERS, MILITIA -> ARMY_NAMES;
             };
         }
 
@@ -244,6 +254,8 @@ public class Captains extends SavedData {
                         : Component.translatable("com.colonies_at_war.captain.raid.warband", of);
                 case ARMY -> of.isEmpty() ? Component.translatable("com.colonies_at_war.captain.raid.nameless")
                         : Component.translatable("com.colonies_at_war.captain.raid.army", of);
+                case RAIDERS -> Component.translatable("com.colonies_at_war.captain.raid.raiders", of);
+                case MILITIA -> Component.translatable("com.colonies_at_war.captain.raid.militia", of);
                 case OTHER -> Component.translatable("com.colonies_at_war.captain.raid.other");
             };
         }
@@ -381,7 +393,7 @@ public class Captains extends SavedData {
     private static Component title(final CompoundTag mark) {
         final Component given = Component.translatable(mark.getString(TAG_NAME));
         final Raid raid = Raid.of(mark.getString(TAG_RAID));
-        if (raid == Raid.WARBAND || raid == Raid.ARMY) {
+        if (raid == Raid.WARBAND || raid == Raid.ARMY || raid == Raid.RAIDERS || raid == Raid.MILITIA) {
             final String of = mark.getString(TAG_OF);
             return of.isEmpty() ? Component.translatable(KEY_PLAIN, given) : Component.translatable(KEY_OF, given, of);
         }
@@ -1018,6 +1030,15 @@ public class Captains extends SavedData {
                 base = DyeColor.PURPLE;
                 layer(layers, patterns, BannerPatterns.BORDER, DyeColor.YELLOW);
                 layer(layers, patterns, BannerPatterns.CIRCLE_MIDDLE, DyeColor.YELLOW);
+            }
+            case RAIDERS -> {
+                base = DyeColor.BLACK;
+                layer(layers, patterns, BannerPatterns.CROSS, DyeColor.RED);
+            }
+            case MILITIA -> {
+                base = DyeColor.WHITE;
+                layer(layers, patterns, BannerPatterns.STRIPE_CENTER, DyeColor.BLUE);
+                layer(layers, patterns, BannerPatterns.BORDER, DyeColor.BLUE);
             }
             default -> {
                 base = DyeColor.GRAY;

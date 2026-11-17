@@ -15,8 +15,12 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.Entity.RemovalReason;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
 /**
@@ -49,6 +53,12 @@ public class ArmyRaidEvent extends HordeRaidEvent {
     private static final String TAG_ARMOUR = "caw_armour";
     private static final String TAG_LOOK = "caw_look";
     private static final String TAG_INITIAL = "caw_initial";
+    private static final String TAG_KIND = "caw_kind";
+    private static final String TAG_TITLE = "caw_title";
+    private static final String TAG_GUARDED = "caw_guarded";
+    /** What a guard-led militia's men wear: a village guard's iron, and his shield. */
+    private static final EquipmentSlot[] GUARD_GEAR = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS,
+            EquipmentSlot.FEET, EquipmentSlot.OFFHAND};
 
     private int attacker;
     private String attackerName = "";
@@ -60,6 +70,11 @@ public class ArmyRaidEvent extends HordeRaidEvent {
     private double soldierArmour = 1;
     private String look = "barbarian";
     private int initialSize;
+    /** A camp's or a village's answer: its kind and its raid's name, "Raiders of the Ogre Outpost"; "" for everyone else. */
+    private String kind = "";
+    private String title = "";
+    /** Led by a village's surviving guards: the men wear iron and carry shields. */
+    private boolean guarded;
 
     public ArmyRaidEvent(final IColony colony) {
         super(colony);
@@ -80,8 +95,30 @@ public class ArmyRaidEvent extends HordeRaidEvent {
         return this;
     }
 
+    /** A camp's or a village's survivors coming for the colony: what the place is, what the raid is called, and whether guards lead it. */
+    public ArmyRaidEvent answering(final String kind, final String title, final boolean guarded) {
+        this.kind = kind == null ? "" : kind;
+        this.title = title == null ? "" : title;
+        this.guarded = guarded;
+        return this;
+    }
+
     public int attacker() {
         return attacker;
+    }
+
+    /** {@code camp} or {@code village} for a place's answer, "" for a colony's warband or a kingdom's men. */
+    public String kind() {
+        return kind;
+    }
+
+    /** The raid's own name, "Raiders of the Ogre Outpost", or "" when it is a warband of its attacker. */
+    public String title() {
+        return title;
+    }
+
+    public boolean guarded() {
+        return guarded;
     }
 
     public long campaign() {
@@ -109,7 +146,7 @@ public class ArmyRaidEvent extends HordeRaidEvent {
 
     @Override
     protected MutableComponent getDisplayName() {
-        return Component.literal(attackerName.isEmpty() ? "An army" : "Warband of " + attackerName);
+        return Component.literal(!title.isEmpty() ? title : attackerName.isEmpty() ? "An army" : "Warband of " + attackerName);
     }
 
     // ------------------------------------------------------------------ the soldiers
@@ -163,12 +200,50 @@ public class ArmyRaidEvent extends HordeRaidEvent {
                 raider.setCustomName(Captains.title(raider));
                 raider.setCustomNameVisible(true);
             } else {
+                outfit(raider);
                 raider.setCustomName(attackerName.isEmpty() ? Component.translatable("com.colonies_at_war.army.soldier_nameless")
                         : Component.translatable("com.colonies_at_war.army.soldier", attackerName));
                 raider.setCustomNameVisible(false);
             }
         } catch (final Throwable t) {
             Warfare.LOGGER.debug("[army] could not re-stat a soldier: {}", t.toString());
+        }
+    }
+
+    /**
+     * A guard-led militia's man in a village guard's iron, with his shield. Not a prize: none of it
+     * drops. A captain is left alone - his own gear is a tier above this.
+     */
+    private void outfit(final Entity entity) {
+        // dressed already means the whole kit: a raider MineColonies put in iron of its own still
+        // needs his shield, and his iron must not drop either
+        if (!guarded || !(entity instanceof Mob man) || Captains.isCaptain(man)
+                || man.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE) && man.getItemBySlot(EquipmentSlot.OFFHAND).is(Items.SHIELD)) {
+            return;
+        }
+        man.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));
+        man.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
+        man.setItemSlot(EquipmentSlot.LEGS, new ItemStack(Items.IRON_LEGGINGS));
+        man.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.IRON_BOOTS));
+        man.setItemSlot(EquipmentSlot.OFFHAND, new ItemStack(Items.SHIELD));
+        for (final EquipmentSlot slot : GUARD_GEAR) {
+            man.setDropChance(slot, 0.0f);
+        }
+    }
+
+    /**
+     * Each update, a guard-led militia's men are looked over again: a raider spawned by MineColonies
+     * may be handed his kit after he registers, and a man back from a restart is dressed anew.
+     */
+    @Override
+    public void onUpdate() {
+        super.onUpdate();
+        if (guarded) {
+            for (final Entity entity : new java.util.ArrayList<>(getEntities())) {
+                if (entity.isAlive()) {
+                    outfit(entity);
+                }
+            }
         }
     }
 
@@ -209,7 +284,7 @@ public class ArmyRaidEvent extends HordeRaidEvent {
         }
         openRaidHistory();
         Campaigns.siegeStood(getColony(), campaign, getSpawnPos());
-        MessageUtils.format(Component.literal("The warband of " + attackerName + " is at the walls of "
+        MessageUtils.format(Component.literal((title.isEmpty() ? "The warband of " + attackerName + " is" : title + " are") + " at the walls of "
                         + getColony().getName() + " - " + initialSize + " soldiers from the "
                         + BlockPosUtil.calcDirection(getColony().getCenter(), getSpawnPos()).getLongText().getString()))
                 .withPriority(MessageUtils.MessagePriority.DANGER)
@@ -311,6 +386,9 @@ public class ArmyRaidEvent extends HordeRaidEvent {
         tag.putDouble(TAG_ARMOUR, soldierArmour);
         tag.putString(TAG_LOOK, look);
         tag.putInt(TAG_INITIAL, initialSize);
+        tag.putString(TAG_KIND, kind);
+        tag.putString(TAG_TITLE, title);
+        tag.putBoolean(TAG_GUARDED, guarded);
         return tag;
     }
 
@@ -326,6 +404,9 @@ public class ArmyRaidEvent extends HordeRaidEvent {
         soldierArmour = tag.getDouble(TAG_ARMOUR);
         look = tag.getString(TAG_LOOK);
         initialSize = tag.getInt(TAG_INITIAL);
+        kind = tag.getString(TAG_KIND);
+        title = tag.getString(TAG_TITLE);
+        guarded = tag.getBoolean(TAG_GUARDED);
     }
 
     public static ArmyRaidEvent loadFromNBT(final IColony colony, final CompoundTag tag,

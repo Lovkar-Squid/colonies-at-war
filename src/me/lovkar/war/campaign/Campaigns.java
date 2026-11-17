@@ -234,15 +234,27 @@ public class Campaigns extends SavedData {
 
     /**
      * A kingdom's answer: its men at the colony's gate, some days after the colony's were at its.
+     * Or a camp's or a village's: their survivors, the same way.
      *
      * <p>A Waking World kingdom has no War Room and no clock of its own, so this is the mod's:
      * a debt written down when a warband attacks a kingdom, paid as a real raid at the colony the
-     * next time somebody is there to fight it, forgotten if nobody is for a week.</p>
+     * next time somebody is there to fight it, forgotten if nobody is for a week. A camp or a
+     * village has even less, and is written down the same way.</p>
      */
     public static final class Reprisal {
+        public static final String KINGDOM = "kingdom";
+
         public long id;
+        /** {@link #KINGDOM}, {@link Places#CAMP} or {@link Places#VILLAGE}: who answers. A save without it is a kingdom's. */
+        public String kind = KINGDOM;
+        /** A kingdom's centre and name; ZERO and "" for a camp or a village. */
         public BlockPos kingdom = BlockPos.ZERO;
         public String kingdomName = "";
+        /** A camp's or a village's middle (one debt per place and colony) and its name, "Ogre Outpost"; ZERO and "" for a kingdom. */
+        public BlockPos place = BlockPos.ZERO;
+        public String placeName = "";
+        /** A village's Guard Villagers' guards who survived the attack and lead its answer; 0 otherwise. */
+        public int guards;
         public int colony;
         public String colonyName = "";
         public String dimension = Level.OVERWORLD.location().toString();
@@ -253,11 +265,56 @@ public class Campaigns extends SavedData {
         public int eventId;
         public boolean sacked;
 
+        public boolean onKingdom() {
+            return !Places.CAMP.equals(kind) && !Places.VILLAGE.equals(kind);
+        }
+
+        /** Where its men come from: the kingdom's centre or the place's middle. */
+        public BlockPos from() {
+            return onKingdom() ? kingdom : place;
+        }
+
+        /** "the kingdom of Ironhold", "the Ogre Outpost". */
+        public String source() {
+            return onKingdom() ? "the kingdom of " + kingdomName : "the " + placeName;
+        }
+
+        /** "the kingdom of Ironhold's men", "the raiders of the Ogre Outpost", "the militia of the Village". */
+        public String men() {
+            return onKingdom() ? source() + "'s men" : Places.CAMP.equals(kind) ? "the raiders of " + source() : "the militia of " + source();
+        }
+
+        /** What its raid is called: "Raiders of the Ogre Outpost", "Militia of the Village"; "" for a kingdom's. */
+        public String title() {
+            return onKingdom() ? "" : (Places.CAMP.equals(kind) ? "Raiders of " : "Militia of ") + source();
+        }
+
         public String describe() {
+            if (!onKingdom()) {
+                return eventId != 0 ? capital(men()) + " are at the walls of " + colonyName + " - " + size + " soldiers"
+                        : capital(source()) + " is coming for " + colonyName + (guards > 0 ? ", its guards at the head" : "")
+                        + " - " + size + " soldiers";
+            }
             return eventId != 0 ? kingdomName + "'s men are at the walls of " + colonyName + " - " + size + " soldiers"
                     : kingdomName + " is coming for " + colonyName + (sacked ? " - the sack will be answered" : "")
                     + " - " + size + " soldiers";
         }
+
+        /** "the Ogre Outpost will come for you in 2 days": the line on the War Table and in /war targets. */
+        public String owed(final long now) {
+            if (eventId != 0) {
+                return men() + " are at your walls";
+            }
+            if (due <= now) {
+                return source() + " will come for you as soon as somebody is home";
+            }
+            final long days = Math.max(1, (due - now + 23999) / 24000L);
+            return source() + " will come for you in " + days + (days == 1 ? " day" : " days");
+        }
+    }
+
+    private static String capital(final String text) {
+        return text.isEmpty() ? text : Character.toUpperCase(text.charAt(0)) + text.substring(1);
     }
 
     /**
@@ -471,7 +528,7 @@ public class Campaigns extends SavedData {
         return false;
     }
 
-    /** The kingdoms' answers still owed to this colony, or on their way. */
+    /** The answers still owed to this colony, or on their way: kingdoms', camps' and villages'. */
     public static List<Reprisal> reprisalsFor(final ServerLevel level, final int colony) {
         final List<Reprisal> out = new ArrayList<>();
         for (final Reprisal r : of(level).reprisals) {
@@ -1097,19 +1154,19 @@ public class Campaigns extends SavedData {
                 // quiet town too long and is called off
                 final IColonyEvent event = colony.getEventManager().getEventByID(r.eventId);
                 if (event == null || event.getStatus() == EventStatus.CANCELED) {
-                    log.add(level, r.colony, 0, "the kingdom of " + r.kingdomName + "'s men found no ground at " + r.colonyName + " and went home");
+                    log.add(level, r.colony, 0, r.men() + " found no ground at " + r.colonyName + " and went home");
                     reprisals.remove(i);
                     changed = true;
                 } else if (now >= r.expires) {
                     closeSiege(colony, r.eventId);
-                    log.add(level, r.colony, 0, "the kingdom of " + r.kingdomName + "'s men waited at " + r.colonyName + " and went home");
+                    log.add(level, r.colony, 0, r.men() + " waited at " + r.colonyName + " and went home");
                     reprisals.remove(i);
                     changed = true;
                 }
                 continue;
             }
             if (now >= r.expires) {
-                log.add(level, r.colony, 0, "the kingdom of " + r.kingdomName + " never came for " + r.colonyName);
+                log.add(level, r.colony, 0, r.source() + " never came for " + r.colonyName);
                 reprisals.remove(i);
                 changed = true;
                 continue;
@@ -1296,7 +1353,8 @@ public class Campaigns extends SavedData {
             c.approach = mine.getCenter();
         }
         final Places.Defenders there = Places.defenders(level, place);
-        final Battle battle = Battle.roll(c.attack, Places.defence(level, place, there), level.getRandom());
+        final int defence = Places.defence(level, place, there);
+        final Battle battle = Battle.roll(c.attack, defence, level.getRandom());
         c.fought = true;
         c.won = battle.won();
         c.margin = battle.margin();
@@ -1305,10 +1363,11 @@ public class Campaigns extends SavedData {
             c.report += "; " + fightGuards(c, there.guards());
         }
         final StringBuilder line = new StringBuilder(c.attackerName + "'s warband " + c.report + " at " + c.defenderName);
+        int smashed = 0;
         if (c.won) {
             c.plunder = Plunder.roll(level, Places.plunderTable(place), Places.wealth(place), c.target, c.margin, true, level.getRandom());
             line.append("; carries off ").append(Plunder.describe(c.plunder));
-            final int smashed = Places.clear(level, place);
+            smashed = Places.clear(level, place);
             if (smashed > 0) {
                 line.append("; the camp is cleared - ").append(smashed).append(smashed == 1 ? " spawner" : " spawners").append(" smashed");
             }
@@ -1322,6 +1381,7 @@ public class Campaigns extends SavedData {
         }
         log.add(level, c.attacker, 0, line.toString());
         Warfare.LOGGER.info("[campaign] {}", line);
+        owe(level, mine, place, c, defence, smashed, now);
         turnHome(level, c, now, c.target, c.warRoom);
     }
 
@@ -1379,7 +1439,7 @@ public class Campaigns extends SavedData {
         r.expires = r.due + 7 * 24000L;
         // one debt per kingdom and colony: a second attack makes it bigger, not a second raid
         for (final Reprisal old : new ArrayList<>(reprisals)) {
-            if (old.colony == r.colony && old.kingdom.equals(r.kingdom) && old.eventId == 0) {
+            if (old.onKingdom() && old.colony == r.colony && old.kingdom.equals(r.kingdom) && old.eventId == 0) {
                 r.size = Math.min(16, Math.max(r.size, old.size + tier));
                 r.strength = Math.max(r.strength, old.strength + tier * 4);
                 r.due = Math.min(r.due, old.due);
@@ -1394,6 +1454,78 @@ public class Campaigns extends SavedData {
                 r.colonyName, r.kingdomName, r.size, r.strength, days);
     }
 
+    /**
+     * The camp or the village writes the colony down the way a kingdom does: its survivors will come,
+     * sooner after a sack, and a second attack on the same place makes the same debt bigger.
+     *
+     * <p>How many come is what the place could field, an eighth of its defence, and how hard it was
+     * hit: a man for each spawner smashed, for every two plunder rolls a sack carried off and for
+     * each of its guards who fell. Where Guard Villagers' guards stood and some lived through it,
+     * they lead the answer and bring two men each - the core of it. Clamped 3..16 like a kingdom's.</p>
+     */
+    private void owe(final ServerLevel level, final IColony mine, final Places.Place place, final Campaign c,
+                     final int defence, final int smashed, final long now) {
+        if (!WarConfig.placesStrikeBack()) {
+            return;
+        }
+        final int guards = place.isCamp() ? 0 : Math.max(0, c.villageGuards - c.villageGuardsFell);
+        final int hit = smashed + (c.won ? Plunder.rolls(Places.wealth(place), c.margin, true) / 2 : 0) + c.villageGuardsFell;
+        final int size = placeReprisalSize(defence, hit, guards);
+        final int strength = Math.max(size * 4, defence + hit * 4);
+        final int days = Math.max(1, c.won ? WarConfig.reprisalDays() / 2 : WarConfig.reprisalDays());
+        final BlockPos at = Places.anchor(level, place);
+        Reprisal r = null;
+        for (final Reprisal old : reprisals) {
+            if (old.colony == mine.getID() && old.kind.equals(place.kind()) && old.place.equals(at) && old.eventId == 0) {
+                r = old;
+                break;
+            }
+        }
+        final long fresh = now + days * 24000L;
+        final boolean folded = r != null;
+        if (folded) {
+            // one debt per place and colony: a second attack makes it bigger and nearer, not a second raid
+            r.size = Math.min(16, Math.max(size, r.size + Math.max(1, size / 2)));
+            r.strength = Math.max(strength, r.strength + strength / 2);
+            r.due = Math.min(r.due, fresh);
+            r.guards = Math.max(r.guards, guards);
+            r.sacked |= c.won;
+        } else {
+            r = new Reprisal();
+            r.id = next++;
+            r.kind = place.kind();
+            r.place = at;
+            r.placeName = place.name();
+            r.guards = guards;
+            r.colony = mine.getID();
+            r.colonyName = mine.getName();
+            r.dimension = mine.getDimension().location().toString();
+            r.sacked = c.won;
+            r.size = size;
+            r.strength = strength;
+            r.due = fresh;
+            reprisals.add(r);
+        }
+        // the week runs from the latest attack's day, as a kingdom's does: a fresh attack on a place
+        // whose old debt nobody was home for is not forgotten with the old one
+        r.expires = Math.max(r.expires, fresh + 7 * 24000L);
+        setDirty();
+        final long left = Math.max(1, (r.due - now + 23999) / 24000L);
+        final String within = " within " + left + (left == 1 ? " day." : " days.");
+        tell(mine, place.isCamp()
+                ? capital(r.source()) + (folded ? " has not forgotten the last time: more of its raiders will come for you" : " will not let this stand: its raiders will come for you") + within
+                : capital(r.source()) + " will not forget it: " + (folded ? "more of its militia" : "its militia")
+                + (r.guards > 0 ? ", led by " + r.guards + (r.guards == 1 ? " surviving guard," : " surviving guards,") : "")
+                + " will come for you" + within, MessageUtils.MessagePriority.DANGER);
+        Warfare.LOGGER.info("[campaign] {} owes {} a reprisal{}: {} soldiers, strength {}, {} guard(s) at the head, due in {} day(s)",
+                r.colonyName, r.source(), folded ? " (folded)" : "", r.size, r.strength, r.guards, left);
+    }
+
+    /** How many of a camp's or a village's men come: an eighth of its defence, the hurt done to it, two for each guard who leads them. */
+    public static int placeReprisalSize(final int defence, final int hit, final int guards) {
+        return Math.max(3, Math.min(16, Math.round(defence / 8f) + hit + guards * 2));
+    }
+
     /** The kingdom's men arrive: a raid at the colony, fought by its guards like any other. */
     private boolean strike(final ServerLevel level, final Reprisal r, final IColony colony, final long now) {
         final BlockPos spawn = spawnAt(level, colony);
@@ -1401,8 +1533,11 @@ public class Campaigns extends SavedData {
             return false;
         }
         final double perMan = Math.max(4, r.strength / (double) r.size);
-        final ArmyRaidEvent event = new ArmyRaidEvent(colony).warband(0, r.kingdomName, -r.id, r.size,
+        final ArmyRaidEvent event = new ArmyRaidEvent(colony).warband(0, r.onKingdom() ? r.kingdomName : r.source(), -r.id, r.size,
                 16 + perMan * 2.0, 2 + perMan / 3.0, 1 + perMan / 6.0, WarConfig.armyLook());
+        if (!r.onKingdom()) {
+            event.answering(r.kind, r.title(), r.guards > 0);
+        }
         event.setSpawnPoint(spawn);
         event.setHorde(new Horde(r.size));
         try {
@@ -1413,35 +1548,35 @@ public class Campaigns extends SavedData {
             job.getResult().startJob(Pathfinding.getExecutor());
             event.setSpawnPath(job.getResult());
         } catch (final Throwable t) {
-            Warfare.LOGGER.debug("[campaign] no spawn path for the kingdom's men: {}", t.toString());
+            Warfare.LOGGER.debug("[campaign] no spawn path for {}: {}", r.men(), t.toString());
         }
         colony.getEventManager().addEvent(event);
         r.eventId = event.getID();
         r.expires = now + siegeNights() * 24000L + SIEGE_GRACE;
-        log.add(level, r.colony, 0, "the kingdom of " + r.kingdomName + " marched on " + r.colonyName + " - " + r.size + " soldiers");
-        tell(colony, "The kingdom of " + r.kingdomName + " has come for what you did: " + r.size + " soldiers at your walls.",
-                MessageUtils.MessagePriority.DANGER);
-        Warfare.LOGGER.info("[campaign] the kingdom of {} strikes {} - {} soldiers, event {}", r.kingdomName, r.colonyName, r.size, r.eventId);
+        log.add(level, r.colony, 0, r.source() + " marched on " + r.colonyName + " - " + r.size + " soldiers");
+        tell(colony, capital(r.source()) + " has come for what you did: " + r.size + " soldiers at your walls"
+                + (r.guards > 0 ? ", its guards at the head." : "."), MessageUtils.MessagePriority.DANGER);
+        Warfare.LOGGER.info("[campaign] {} strikes {} - {} soldiers, event {}", r.source(), r.colonyName, r.size, r.eventId);
         return true;
     }
 
-    /** The kingdom's raid is over. Its men still standing at the end of the night have had their way. */
+    /** The kingdom's (or the place's) raid is over. Its men still standing at the end of the night have had their way. */
     private void reprisalEnded(final ServerLevel level, final Reprisal r, final IColony colony, final int alive, final int marched) {
         final Battle battle = Battle.fought(r.strength, Battle.defence(colony), alive, marched);
         // "the men were thrown back", not "was": the report is written for a warband
         final String said = battle.report().replace("was thrown back", "were thrown back");
-        final StringBuilder line = new StringBuilder("the kingdom of " + r.kingdomName + "'s men " + said + " at " + r.colonyName);
+        final StringBuilder line = new StringBuilder(r.men() + " " + said + " at " + r.colonyName);
         if (battle.won()) {
             final List<ItemStack> taken = takeGoods(colony, WarConfig.plunderRolls() * 2);
             line.append("; carried off ").append(Plunder.describe(taken));
-            final int broke = Breach.make(level, colony, r.kingdom);
+            final int broke = Breach.make(level, colony, r.from());
             if (broke > 0) {
                 line.append("; breached the wall (").append(broke).append(" blocks)");
             }
-            tell(colony, "The kingdom of " + r.kingdomName + " has had its revenge: " + said + ", and its men carried off "
+            tell(colony, capital(r.source()) + " has had its revenge: " + said + ", and its men carried off "
                     + Plunder.describe(taken) + (broke > 0 ? " and broke the wall." : "."), MessageUtils.MessagePriority.DANGER);
         } else {
-            tell(colony, "The kingdom of " + r.kingdomName + "'s men were thrown back from " + r.colonyName + ".",
+            tell(colony, capital(r.men()) + " were thrown back from " + r.colonyName + ".",
                     MessageUtils.MessagePriority.IMPORTANT);
         }
         log.add(level, r.colony, 0, line.toString());
@@ -2336,7 +2471,7 @@ public class Campaigns extends SavedData {
                 Kingdoms.favour(level, kingdom, WarConfig.convoyStanding(), "convoy");
                 int forgiven = 0;
                 for (final Reprisal r : new ArrayList<>(reprisals)) {
-                    if (r.colony == c.attacker && r.kingdom.equals(Kingdoms.centre(kingdom)) && r.eventId == 0) {
+                    if (r.onKingdom() && r.colony == c.attacker && r.kingdom.equals(Kingdoms.centre(kingdom)) && r.eventId == 0) {
                         reprisals.remove(r);
                         forgiven++;
                     }
@@ -2485,8 +2620,13 @@ public class Campaigns extends SavedData {
             final CompoundTag one = (CompoundTag) t;
             final Reprisal r = new Reprisal();
             r.id = one.getLong("id");
+            // a 0.2.2 save knows only kingdoms: no kind is a kingdom's debt
+            r.kind = one.contains("kind") ? one.getString("kind") : Reprisal.KINGDOM;
             r.kingdom = BlockPos.of(one.getLong("kingdom"));
             r.kingdomName = one.getString("kingdomName");
+            r.place = one.contains("place") ? BlockPos.of(one.getLong("place")) : BlockPos.ZERO;
+            r.placeName = one.getString("placeName");
+            r.guards = one.getInt("guards");
             r.colony = one.getInt("colony");
             r.colonyName = one.getString("colonyName");
             r.dimension = one.contains("dimension") ? one.getString("dimension") : r.dimension;
@@ -2606,8 +2746,12 @@ public class Campaigns extends SavedData {
         for (final Reprisal r : reprisals) {
             final CompoundTag one = new CompoundTag();
             one.putLong("id", r.id);
+            one.putString("kind", r.kind);
             one.putLong("kingdom", r.kingdom.asLong());
             one.putString("kingdomName", r.kingdomName);
+            one.putLong("place", r.place.asLong());
+            one.putString("placeName", r.placeName);
+            one.putInt("guards", r.guards);
             one.putInt("colony", r.colony);
             one.putString("colonyName", r.colonyName);
             one.putString("dimension", r.dimension);

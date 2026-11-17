@@ -838,6 +838,12 @@ public final class WarCommands {
                     + me.lovkar.war.campaign.Places.defence(src.getLevel(), place)), false);
             shown++;
         }
+        // what is owed to us: a kingdom's, a camp's or a village's men on their way
+        final long now = src.getServer().overworld().getGameTime();
+        for (final me.lovkar.war.campaign.Campaigns.Reprisal r : me.lovkar.war.campaign.Campaigns.reprisalsFor(src.getLevel(), mine.getID())) {
+            src.sendSuccess(() -> Component.literal("owed: " + r.owed(now) + " - " + r.size + " soldiers"), false);
+            shown++;
+        }
         if (shown == 0) {
             src.sendSuccess(() -> Component.literal("nothing to march on in this world"), false);
         }

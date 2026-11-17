@@ -254,6 +254,16 @@ public final class Places {
         return found;
     }
 
+    /**
+     * Where a place is, once and for all: the middle of its structure, whichever of its houses a
+     * warband was sent at, so that two attacks on one village are one village. The place's own
+     * position when its structure cannot be read.
+     */
+    public static BlockPos anchor(final ServerLevel level, final Place place) {
+        final StructureStart start = startOf(level, place);
+        return start == null ? place.pos() : start.getBoundingBox().getCenter();
+    }
+
     private static StructureStart startOf(final ServerLevel level, final Place place) {
         try {
             final Registry<Structure> registry = level.registryAccess().registryOrThrow(Registries.STRUCTURE);

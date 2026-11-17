@@ -44,6 +44,7 @@ public final class WarConfig {
     private static final ModConfigSpec.BooleanValue MARCH_ON_KINGDOMS;
     private static final ModConfigSpec.IntValue KINGDOM_STANDING_COST;
     private static final ModConfigSpec.BooleanValue KINGDOMS_STRIKE_BACK;
+    private static final ModConfigSpec.BooleanValue PLACES_STRIKE_BACK;
     private static final ModConfigSpec.BooleanValue MARCH_ON_CAMPS;
     private static final ModConfigSpec.IntValue VILLAGE_GUARD_WEIGHT;
     private static final ModConfigSpec.IntValue CAMPAIGN_EXPERIENCE;
@@ -175,8 +176,14 @@ public final class WarConfig {
                 .comment("A kingdom that was marched on sends its own men to the colony some days later - a real raid,",
                         "fought when somebody is there. Off, and a kingdom only holds a grudge.")
                 .define("kingdomsStrikeBack", true);
+        PLACES_STRIKE_BACK = builder
+                .comment("A camp or a village that was marched on (won or lost) sends its survivors to the colony some",
+                        "days later - raiders, or a militia led by its surviving Guard Villagers' guards - as a real raid,",
+                        "fought when somebody is there, on the same days as a kingdom's. Off, and nobody comes.")
+                .define("placesStrikeBack", true);
         REPRISAL_DAYS = builder
-                .comment("Days until a kingdom's men arrive after an attack on it; a sack is answered in half the time.")
+                .comment("Days until a kingdom's, a camp's or a village's men arrive after an attack on it; a sack is",
+                        "answered in half the time. Unpaid for a week (nobody home), the debt is forgotten.")
                 .defineInRange("reprisalDays", 2, 1, 14);
         TRUCE_DAYS = builder
                 .comment("Days a truce holds after a peace: neither side may declare war again until it runs out.")
@@ -440,6 +447,14 @@ public final class WarConfig {
     public static boolean kingdomsStrikeBack() {
         try {
             return KINGDOMS_STRIKE_BACK.get();
+        } catch (final Throwable t) {
+            return true;
+        }
+    }
+
+    public static boolean placesStrikeBack() {
+        try {
+            return PLACES_STRIKE_BACK.get();
         } catch (final Throwable t) {
             return true;
         }

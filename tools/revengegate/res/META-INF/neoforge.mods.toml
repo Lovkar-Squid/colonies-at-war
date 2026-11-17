@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="GPL-3.0-or-later"
+[[mods]]
+modId="revengegate"
+version="1.0.0"
+displayName="Colonies at War - revenge gate"
+description="Headless test: a raided camp and village each owe the colony a reprisal, a second attack folds, the debts are paid as raids with a captain, an empty colony's debt is forgotten, and all of it saves."
+[[dependencies.revengegate]]
+modId="colonies_at_war"
+type="required"
+versionRange="*"
+ordering="AFTER"
+side="SERVER"
+[[dependencies.revengegate]]
+modId="minecolonies"
+type="required"
+versionRange="*"
+ordering="AFTER"
+side="SERVER"
