@@ -1,4 +1,4 @@
-# Colonies at War 0.3.0 (unreleased)
+# Colonies at War 0.3.0 (17 Nov 2026)
 
 ## Named captains
 
