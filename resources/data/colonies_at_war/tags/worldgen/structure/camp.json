@@ -17,6 +17,106 @@
       "id": "minecolonies:ship",
       "required": false
     },
-    "minecraft:pillager_outpost"
+    "minecraft:pillager_outpost",
+    {
+      "id": "kingsandmonsters:ogre_outpost_plains",
+      "required": false
+    },
+    {
+      "id": "kingsandmonsters:ogre_outpost_swamp",
+      "required": false
+    },
+    {
+      "id": "kingsandmonsters:ogre_kings_fort",
+      "required": false
+    },
+    {
+      "id": "ifcintegrations:goblin_camp",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:bandit_camp",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:bandit_ruins",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:bandit_ruins_2",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:neutral_tent_camp",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:neutral_tent_camp_2",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:neutral_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:barathian_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:barathian_castle",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:bohemian_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:burgundian_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:burgundian_castle",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:hospitaller_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:hospitaller_castle",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:orleanian_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:orleanian_castle",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:templar_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:templar_castle",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:valarian_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:valarian_castle",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:visgothian_outpost",
+      "required": false
+    },
+    {
+      "id": "valarian_conquest:visgothian_castle",
+      "required": false
+    }
   ]
 }

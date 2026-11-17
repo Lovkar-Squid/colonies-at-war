@@ -1,6 +1,14 @@
 {
   "replace": false,
   "values": [
-    "#minecraft:village"
+    "#minecraft:village",
+    {
+      "id": "kobolds:kobold_den",
+      "required": false
+    },
+    {
+      "id": "ifcintegrations:dwarf_village",
+      "required": false
+    }
   ]
 }
