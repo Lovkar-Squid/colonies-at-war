@@ -399,7 +399,9 @@ public class Campaigns extends SavedData {
         final List<ItemStack> taken = new ArrayList<>();
         final Campaigns data = of(level);
         final Campaign c = byId(level, id);
-        if (c == null || maxStacks <= 0 || !c.onTheRoad(level.getServer().overworld().getGameTime())) {
+        // a convoy on another dimension's road is not on this one's, the same as convoysOnTheRoad sees it
+        if (c == null || maxStacks <= 0 || !c.onTheRoad(level.getServer().overworld().getGameTime())
+                || !level.dimension().location().toString().equals(c.dimension)) {
             return taken;
         }
         // pinned before the first theft, so a convoy from an older save counts its half from here on
@@ -1930,7 +1932,8 @@ public class Campaigns extends SavedData {
         final Campaigns data = of(level);
         final long now = level.getServer().overworld().getGameTime();
         c.won = false;
-        c.report = "was recalled";
+        // a convoy robbed before it was called back keeps saying so
+        c.report = "was recalled" + robbedNote(c);
         // as far as they got is as far as they have to come back
         c.phase = Phase.RETURNING;
         c.home = now + Math.max(EVERY, now - c.departed);
@@ -2272,6 +2275,11 @@ public class Campaigns extends SavedData {
         return c;
     }
 
+    /** " (robbed on the road: 80 of its 160 items taken)" for a robbed convoy, else "" - in plain text, as the war log keeps it. */
+    private static String robbedNote(final Campaign c) {
+        return c.robbed <= 0 ? "" : Component.translatable("com.colonies_at_war.convoy.robbed", c.robbed, c.setOut()).getString();
+    }
+
     /** A courier from the warehouse, borrowed for the trip - or null, and the escort carries it. */
     private static ICitizenData courier(final IColony mine, final ITravellingManager travel) {
         try {
@@ -2291,8 +2299,7 @@ public class Campaigns extends SavedData {
         final IColony mine = colony(level, c.attacker);
         final StringBuilder line = new StringBuilder(c.attackerName + "'s convoy reached " + c.defenderName);
         // thieves on the road (Colonist Thieves, through the bridge): only what is left arrives, and everyone is told
-        final String robbedNote = c.robbed <= 0 ? ""
-                : Component.translatable("com.colonies_at_war.convoy.robbed", c.robbed, c.setOut()).getString();
+        final String robbedNote = robbedNote(c);
         if (c.robbed > 0) {
             final Component told = Component.translatable("com.colonies_at_war.convoy.robbed_told", c.defenderName, c.robbed, c.setOut());
             tell(mine, told, MessageUtils.MessagePriority.IMPORTANT);

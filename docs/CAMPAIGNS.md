@@ -302,7 +302,8 @@ holds (`setOut()`, pinned at the first robbery). `arriveWithConvoy` delivers wha
 `robbed > 0` the war log line and the report carry the `com.colonies_at_war.convoy.robbed` note
 ("robbed on the road: 80 of its 160 items taken", resolved on the server, since the log keeps plain
 text) and both colonies are told (`convoy.robbed_told`); a convoy that found nobody brings the rest
-home as before. Standing is never touched by any of it: the thief calls `offend` himself when his
+home as before, and one recalled after a robbery carries the note in its "was recalled" report.
+`rob` answers only in the convoy's own dimension, like `convoysOnTheRoad`. Standing is never touched by any of it: the thief calls `offend` himself when his
 man was caught or seen. The bridge's side is `WarBridge.convoysNear(level, at, range)` (one
 `long[]` a convoy: id, sender, receiver or 0 for a kingdom, escort, stacks, x, y, z; the range is
 measured flat, on x and z), `convoyCargo` (copies), `convoyEscort` (the guards, not the courier;

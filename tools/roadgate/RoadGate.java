@@ -287,9 +287,19 @@ public final class RoadGate {
                 && Plunder.count(c.plunder) == TOTAL && c.guards.length == 2 && c.onTheRoad(server.overworld().getGameTime()),
                 c.setOutWith + " set out, " + Plunder.describe(c.plunder) + ", " + c.guards.length + " guards");
 
-        // half way: the clock moved back by half the trip
+        // a quarter of the way first, so a convoy pinned half way whatever the clock says would fail
         final long now = server.overworld().getGameTime();
         final long trip = c.arrive - c.departed;
+        c.departed = now - trip / 4;
+        c.arrive = c.departed + trip;
+        final BlockPos quarter = new BlockPos(c.warRoom.getX() + (c.target.getX() - c.warRoom.getX()) / 4,
+                c.warRoom.getY() + (c.target.getY() - c.warRoom.getY()) / 4, c.warRoom.getZ() + (c.target.getZ() - c.warRoom.getZ()) / 4);
+        final long[] early = row(near(quarter, 8), id);
+        check("convoysNear finds it a quarter of the way along when a quarter of the trip has passed", early != null
+                        && Math.abs(early[5] - quarter.getX()) <= 2 && Math.abs(early[7] - quarter.getZ()) <= 2,
+                early == null ? "not found" : early[5] + "," + early[6] + "," + early[7] + " vs " + quarter.toShortString());
+
+        // half way: the clock moved back by half the trip
         c.departed = now - trip / 2;
         c.arrive = c.departed + trip;
         final BlockPos mid = new BlockPos((c.warRoom.getX() + c.target.getX()) / 2, (c.warRoom.getY() + c.target.getY()) / 2,

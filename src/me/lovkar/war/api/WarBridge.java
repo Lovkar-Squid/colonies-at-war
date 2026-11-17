@@ -96,8 +96,8 @@ public final class WarBridge {
      * x, y, z}} - the receiving colony is 0 when the convoy goes to a Waking World kingdom, and
      * x, y, z is where it is now, on the straight road from its War Room to the target, as far
      * along as the time since it left says. The range is measured flat (x and z): a road is
-     * watched from a hill as well as from beside it. A convoy that has arrived, or is coming home
-     * empty, is not on the list. Empty when there are none, or on any error.</p>
+     * watched from a hill as well as from beside it. A convoy that has arrived, or is on its way
+     * home, is not on the list. Empty when there are none, or on any error.</p>
      */
     public static List<long[]> convoysNear(final ServerLevel level, final BlockPos at, final int range) {
         final List<long[]> out = new ArrayList<>();
