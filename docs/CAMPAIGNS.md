@@ -151,13 +151,38 @@ they carry 28 items out of the warehouse. `/war targets` and `/war march at` fro
 
 `Places` resolves a position through two structure tags (`#colonies_at_war:camp`,
 `#colonies_at_war:village`, the thief's approach: chunk-level `getAllStructuresAt`, a piece hit
-wins) and finds the nearest of a kind with `findNearestMapStructure` (1200 blocks). A camp's
-defence is `20 + spawners*5 (+ armed*3 if loaded)`; the spawners are counted by walking the
+wins) and finds the nearest of a kind with `findNearestMapStructure` (1200 blocks). Since 0.3.0 the
+tags also name other mods' structures, each `"required": false` (Kings & Monsters' ogre camps,
+IFC-Integrations' goblin camp and dwarf village, Valarian Conquest's camps, outposts and castles,
+the kobold den); `tools/check_tags.py` reads every such id back out of the mod's jar. A place's name
+is its structure id's path made readable, a trailing biome word or number dropped
+(`ogre_outpost_plains` -> "Ogre Outpost").
+
+Who stands there is counted only when the place is loaded, inside the structure start's box
+(inflated by 8) together with the old 48-block reach, every mob once, in this order: Guard
+Villagers' guard (entity type `guardvillagers:guard`, looked up with `getOptional` - the entity
+registry defaults to the pig), iron golem, armed (`Enemy`, or a main-hand bow or crossbow or an
+item whose attribute modifiers add attack damage, which covers other mods' weapons), folk (not
+`Enemy`, `Animal`, `WaterAnimal`, `AmbientCreature` or `AbstractGolem`: villagers, kobolds,
+dwarves). A camp's defence is `20 + spawners*5 + armed*3`; the spawners are counted by walking the
 structure start's bounding box - **by chunk** (`startsForStructure(ChunkPos)`), because the
 nearest-structure search hands back a position at y = 0 and `getStructureAt` wants the block
 inside the box. A warband that overruns a camp smashes every spawner in it - the camp goes quiet
-for good - and rolls `plunder/camp`; a village (`max(20, 12 + golems*15 + folk*2)`) only yields
-`plunder/village`. Nobody holds either against anybody. Note the rig runs with
+for good - and rolls `plunder/camp`; a village (`max(20, 12 + golems*15 + guards*villageGuardWeight
++ folk*2 + armed*3)`, the weight 12 by default) only yields `plunder/village`. Nobody holds either
+against anybody.
+
+A village's guards fight back (`Campaigns.fightGuards`, the numbers in `Battle.guardsFell` and
+`Battle.lostToGuards`). Of the guards, `round(had * (0.5 + 0.5*margin))`, one at least, fall when
+the warband wins, `round(had * 0.25 * (1 + margin))` when it is thrown back. The warband loses `had`
+men when thrown back and `ceil(had / 2)` when it wins, capped at what it brought: sellswords first
+(`mercenaries` goes down), then its own guards, the last of `guards`, who are not killed - a fight
+nobody watched does not kill a colonist - but come home at 1 health (`carried`). The report gets
+"; N village guards stood against it and M fell; it lost K men (...)". The campaign saves
+`villageGuards`, `villageGuardsFell`, `lostToGuards` and `carried` (a 0.2.2 save reads 0), for the
+village's reprisal. Guard Villagers puts guards of its own into a village it sees built, so with
+that mod installed most villages already have several: a plains village on the rig came to 117 with
+its own 6. Note the rig runs with
 `generate-structures=false` by default; `camprun.sh` turns it on.
 
 ## Veterans and captives
