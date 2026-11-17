@@ -98,7 +98,8 @@ def check(repo):
             if '"' + key + '"' in text:
                 claimed.add(key)
 
-    missing = sorted(k for k in wanted if k not in have)
+    # MineColonies' own keys (guard settings, the help button) live in MineColonies' lang file, not ours
+    missing = sorted(k for k in wanted if k not in have and not k.startswith("com.minecolonies."))
     # a settings label is built by MineColonies, not by us, so it is never "asked for" in our
     # source; it is still ours to provide, and it is not spare
     # what MineColonies builds for us - a settings label, a hut name, a job name - is ours to
