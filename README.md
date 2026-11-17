@@ -281,6 +281,14 @@ needed and none is a dependency:
   an iron golem is 15, a villager 2). A warband that fights them loses men to them: its sellswords
   die, its own guards come home carried.
 
+**And they strike back.** Some days after an attack, won or lost, a camp's or a village's survivors
+come to the colony the way a kingdom's men do: "Raiders of the Pillager Outpost" or "Militia of the
+Village", led by a captain of their own, more of them the harder the place was hit (spawners
+smashed, plunder carried off, guards fallen), sooner after a sack, forgotten if nobody is home for a
+week. Where Guard Villagers' guards lived through it, they lead their village's militia, in iron
+with shields. `/war targets` and the War Table say what is owed. Config: `placesStrikeBack`,
+`reprisalDays`.
+
 ### Veterans, and the men who fell
 
 Every guard who fought earns experience on his guard job's skills when he is home — half again

@@ -99,6 +99,8 @@ public final class WarTable {
                     owes(owed, Campaigns.Reprisal.KINGDOM, centre, now)));
         }
         final List<Places.Place> places = new ArrayList<>(places(level, mine));
+        // a place's middle is read from its structure start, which can load a chunk: only when a place owes us
+        final boolean placesOwe = owed.stream().anyMatch(r -> !r.onKingdom());
         for (final Campaigns.Reprisal r : owed) {
             if (!r.onKingdom() && places.stream().noneMatch(p -> p.kind().equals(r.kind) && Places.anchor(level, p).equals(r.place))) {
                 final Places.Place place = Places.at(level, r.place);
@@ -111,7 +113,7 @@ public final class WarTable {
             final String no = Campaigns.cannotMarchOnPlace(level, mine, place);
             out.add(new Target(place.kind(), 0, place.pos(), place.name(), (int) Math.sqrt(place.pos().distSqr(home)),
                     Expeditions.direction(home, place.pos()), Places.defence(level, place), 0, false, brief(no), "", "", false,
-                    "no road for a convoy", owes(owed, place.kind(), Places.anchor(level, place), now)));
+                    "no road for a convoy", placesOwe ? owes(owed, place.kind(), Places.anchor(level, place), now) : ""));
         }
         out.sort((a, b) -> Integer.compare(a.distance(), b.distance()));
         return out;

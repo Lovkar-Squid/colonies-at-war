@@ -201,7 +201,7 @@ answer. Strength `max(size*4, defence + hit*4)`. The debt is keyed on the colony
 place's anchor (`Places.anchor`, the middle of its structure start's box, so two attacks on one
 village from different houses are one village): a second attack folds into it, `size =
 min(16, max(new, old + max(1, new/2)))`, strength `old + new/2` at least, the earlier due day, the
-debt's id kept. Paid, it is an `ArmyRaidEvent` like a kingdom's (`attacker = 0`, `campaign = -id`)
+debt's id kept, and its week counted from the latest attack's due day, as a kingdom's is. Paid, it is an `ArmyRaidEvent` like a kingdom's (`attacker = 0`, `campaign = -id`)
 with `attackerName` "the Ogre Outpost", and `answering(kind, title, guarded)`: the raid is called
 "Raiders of the Ogre Outpost" or "Militia of the Village", its captain's raid kind is `raiders` or
 `militia` ("Captain Aldric of the Ogre Outpost leads the raiders of the Ogre Outpost against

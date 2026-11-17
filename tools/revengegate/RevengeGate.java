@@ -145,6 +145,7 @@ public final class RevengeGate {
     private long campDebtId;
     private int campSizeBefore;
     private long campDueBefore;
+    private long campExpiresBefore;
     private int captainsAt = -1;
 
     private int fails;
@@ -537,6 +538,7 @@ public final class RevengeGate {
             campDebtId = campDebt.id;
             campSizeBefore = campDebt.size;
             campDueBefore = campDebt.due;
+            campExpiresBefore = campDebt.expires;
         }
         if (bareDebt != null && guardedDebt != null) {
             check("the villages' debts name the village", "Militia of the Village".equals(bareDebt.title())
@@ -602,10 +604,15 @@ public final class RevengeGate {
         final Campaigns.Reprisal r = debts.size() == 1 ? debts.get(0) : null;
         final int raw = expectedSize(fold);
         final int size = Math.min(16, Math.max(raw, campSizeBefore + Math.max(1, raw / 2)));
+        // the week runs from the latest attack's day, as a kingdom's does
+        final long earliest = Math.max(campExpiresBefore, fold.at + (days(fold) + 7) * 24000L);
+        final long latest = Math.max(campExpiresBefore, fold.seen + (days(fold) + 7) * 24000L);
         check("a second attack on the camp folds into the same debt, bigger", r != null && r.id == campDebtId && r.size == size
-                        && campSizeBefore < 16 && r.size > campSizeBefore && r.due == campDueBefore && r.eventId == 0,
+                        && campSizeBefore < 16 && r.size > campSizeBefore && r.due == campDueBefore && r.eventId == 0
+                        && r.expires >= earliest && r.expires <= latest && r.expires > campExpiresBefore,
                 r == null ? debts.size() + " debts at the camp" : "id " + r.id + " (was " + campDebtId + "), " + campSizeBefore + " -> "
-                        + r.size + " soldiers (expected " + size + "), due " + campDueBefore + " -> " + r.due);
+                        + r.size + " soldiers (expected " + size + "), due " + campDueBefore + " -> " + r.due + ", expires "
+                        + campExpiresBefore + " -> " + r.expires + " in [" + earliest + ", " + latest + "]");
         campDebt = r;
         cDebt = debt("colony C's attack on the same camp", cAttack, colonyC, campStart);
         check("colony C's debt is its own, not folded into A's", cDebt != null && r != null && cDebt.id != r.id && cDebt.colony == colonyC.getID(),

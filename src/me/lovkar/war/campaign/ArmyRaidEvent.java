@@ -215,7 +215,10 @@ public class ArmyRaidEvent extends HordeRaidEvent {
      * drops. A captain is left alone - his own gear is a tier above this.
      */
     private void outfit(final Entity entity) {
-        if (!guarded || !(entity instanceof Mob man) || Captains.isCaptain(man) || man.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE)) {
+        // dressed already means the whole kit: a raider MineColonies put in iron of its own still
+        // needs his shield, and his iron must not drop either
+        if (!guarded || !(entity instanceof Mob man) || Captains.isCaptain(man)
+                || man.getItemBySlot(EquipmentSlot.CHEST).is(Items.IRON_CHESTPLATE) && man.getItemBySlot(EquipmentSlot.OFFHAND).is(Items.SHIELD)) {
             return;
         }
         man.setItemSlot(EquipmentSlot.HEAD, new ItemStack(Items.IRON_HELMET));

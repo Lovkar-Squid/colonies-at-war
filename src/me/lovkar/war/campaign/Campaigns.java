@@ -1481,12 +1481,13 @@ public class Campaigns extends SavedData {
                 break;
             }
         }
+        final long fresh = now + days * 24000L;
         final boolean folded = r != null;
         if (folded) {
             // one debt per place and colony: a second attack makes it bigger and nearer, not a second raid
             r.size = Math.min(16, Math.max(size, r.size + Math.max(1, size / 2)));
             r.strength = Math.max(strength, r.strength + strength / 2);
-            r.due = Math.min(r.due, now + days * 24000L);
+            r.due = Math.min(r.due, fresh);
             r.guards = Math.max(r.guards, guards);
             r.sacked |= c.won;
         } else {
@@ -1502,10 +1503,12 @@ public class Campaigns extends SavedData {
             r.sacked = c.won;
             r.size = size;
             r.strength = strength;
-            r.due = now + days * 24000L;
+            r.due = fresh;
             reprisals.add(r);
         }
-        r.expires = r.due + 7 * 24000L;
+        // the week runs from the latest attack's day, as a kingdom's does: a fresh attack on a place
+        // whose old debt nobody was home for is not forgotten with the old one
+        r.expires = Math.max(r.expires, fresh + 7 * 24000L);
         setDirty();
         final long left = Math.max(1, (r.due - now + 23999) / 24000L);
         final String within = " within " + left + (left == 1 ? " day." : " days.");
