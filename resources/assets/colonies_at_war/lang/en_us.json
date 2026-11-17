@@ -126,6 +126,8 @@
   "com.colonies_at_war.captain.raid.amazon": "Amazon raid",
   "com.colonies_at_war.captain.raid.warband": "warband of %s",
   "com.colonies_at_war.captain.raid.army": "army of %s",
+  "com.colonies_at_war.captain.raid.raiders": "raiders of %s",
+  "com.colonies_at_war.captain.raid.militia": "militia of %s",
   "com.colonies_at_war.captain.raid.nameless": "army",
   "com.colonies_at_war.captain.raid.other": "raid",
   "com.colonies_at_war.captain.banner": "Banner of %s",
