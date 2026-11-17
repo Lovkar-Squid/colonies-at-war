@@ -1459,9 +1459,9 @@ public class Campaigns extends SavedData {
      * sooner after a sack, and a second attack on the same place makes the same debt bigger.
      *
      * <p>How many come is what the place could field, an eighth of its defence, and how hard it was
-     * hit: a man for each spawner smashed, for every two stacks carried off and for each of its
-     * guards who fell. Where Guard Villagers' guards stood and some lived through it, they lead the
-     * answer and bring two men each - the core of it. Clamped 3..16 like a kingdom's.</p>
+     * hit: a man for each spawner smashed, for every two plunder rolls a sack carried off and for
+     * each of its guards who fell. Where Guard Villagers' guards stood and some lived through it,
+     * they lead the answer and bring two men each - the core of it. Clamped 3..16 like a kingdom's.</p>
      */
     private void owe(final ServerLevel level, final IColony mine, final Places.Place place, final Campaign c,
                      final int defence, final int smashed, final long now) {
@@ -1469,7 +1469,7 @@ public class Campaigns extends SavedData {
             return;
         }
         final int guards = place.isCamp() ? 0 : Math.max(0, c.villageGuards - c.villageGuardsFell);
-        final int hit = smashed + c.plunder.size() / 2 + c.villageGuardsFell;
+        final int hit = smashed + (c.won ? Plunder.rolls(Places.wealth(place), c.margin, true) / 2 : 0) + c.villageGuardsFell;
         final int size = placeReprisalSize(defence, hit, guards);
         final int strength = Math.max(size * 4, defence + hit * 4);
         final int days = Math.max(1, c.won ? WarConfig.reprisalDays() / 2 : WarConfig.reprisalDays());

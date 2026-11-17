@@ -66,15 +66,17 @@ public final class Plunder {
                 .withParameter(LootContextParams.ORIGIN, Vec3.atCenterOf(origin))
                 .withLuck(Math.max(0f, margin) * 4f + wealth / 25f)
                 .create(LootContextParamSets.CHEST);
-        int rolls = Math.max(1, Math.round(WarConfig.plunderRolls() * (0.5f + Math.max(0f, margin) / 2f)
-                + wealth / 40f));
-        if (doubled) {
-            rolls *= 2;
-        }
+        final int rolls = rolls(wealth, margin, doubled);
         for (int i = 0; i < rolls; i++) {
             out.addAll(table.getRandomItems(params, random));
         }
         return out;
+    }
+
+    /** How many times the table is rolled: the config's rolls, more the wider the victory and the richer the place. */
+    public static int rolls(final int wealth, final float margin, final boolean doubled) {
+        final int rolls = Math.max(1, Math.round(WarConfig.plunderRolls() * (0.5f + Math.max(0f, margin) / 2f) + wealth / 40f));
+        return doubled ? rolls * 2 : rolls;
     }
 
     /** A town's wealth in the thief's units: warehouses ×6 a level, every other hut once, citizens once. */
