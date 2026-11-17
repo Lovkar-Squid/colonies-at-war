@@ -88,6 +88,11 @@ public class ArmyRaidEvent extends HordeRaidEvent {
         return campaign;
     }
 
+    /** Whose men these are: a colony's name or a kingdom's, or "" when nobody said. */
+    public String attackerName() {
+        return attackerName;
+    }
+
     public int initialSize() {
         return initialSize;
     }
@@ -127,6 +132,10 @@ public class ArmyRaidEvent extends HordeRaidEvent {
     /**
      * A soldier has arrived. MineColonies has just statted him for the town he is attacking;
      * re-stat him for the army he marched with, and give him a name so a player knows whose he is.
+     *
+     * <p>The captain is not made here: {@link Captains} picks one for every raid alike, a moment
+     * later. A man who already is one - back from a restart - keeps his own name, "Captain Aldric of
+     * Ironhold"; his extra health is a modifier on top of the stats given here, so it survives them.</p>
      */
     @Override
     public void registerEntity(final Entity entity) {
@@ -150,9 +159,14 @@ public class ArmyRaidEvent extends HordeRaidEvent {
             // the same numbers for everyone: a chief's own initStatsFor already gives him half
             // again the health, double the armour and a point of damage over the men
             raider.initStatsFor(soldierHealth, soldierArmour, soldierDamage);
-            raider.setCustomName(Component.literal((type == types.boss() ? "Captain of " : "Soldier of ")
-                    + (attackerName.isEmpty() ? "the army" : attackerName)));
-            raider.setCustomNameVisible(false);
+            if (Captains.isCaptain(raider)) {
+                raider.setCustomName(Captains.title(raider));
+                raider.setCustomNameVisible(true);
+            } else {
+                raider.setCustomName(attackerName.isEmpty() ? Component.translatable("com.colonies_at_war.army.soldier_nameless")
+                        : Component.translatable("com.colonies_at_war.army.soldier", attackerName));
+                raider.setCustomNameVisible(false);
+            }
         } catch (final Throwable t) {
             Warfare.LOGGER.debug("[army] could not re-stat a soldier: {}", t.toString());
         }

@@ -237,6 +237,20 @@ public class Warfare {
                 (net.neoforged.neoforge.event.server.ServerStoppingEvent e) -> me.lovkar.war.ai.RaidAlarm.standDown());
         net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
                 (net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> me.lovkar.war.ai.RaidAlarm.forget());
+        // the captains: every raid on a colony is led by one, named, with a bar and a trophy. The
+        // death listener goes last, so a mod that cancels a death has had its say first.
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.campaign.Captains::onServerTick);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.campaign.Captains::onJoin);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.campaign.Captains::onLeave);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(EventPriority.LOWEST,
+                me.lovkar.war.campaign.Captains::onDeath);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                me.lovkar.war.campaign.Captains::onDrops);
+        net.neoforged.neoforge.common.NeoForge.EVENT_BUS.addListener(
+                (net.neoforged.neoforge.event.server.ServerStoppedEvent e) -> me.lovkar.war.campaign.Captains.forget());
         LOGGER.info("Colonies at War loaded - walls, wall towers, the War Room and the warband");
     }
 
