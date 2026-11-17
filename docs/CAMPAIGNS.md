@@ -289,6 +289,27 @@ kingdom keyed by its centre) and `cannotConvoy` refuses past `convoysPerWeek`, a
 one already out; nothing loaded is a reason at send time, not a closed road, so the table's
 button can open the bay instead.
 
+**Robbed on the road** (0.3.0, for Colonist Thieves). A convoy is on the road out while it is
+`MARCHING` and `now < arrive` (`Campaign.onTheRoad`; the campaign tick arrives it up to a second
+after `arrive`, and from then on it is not). Where it is, `whereNow`, is the straight line from
+`warRoom` to `target`, as far along as `(now - departed) / (arrive - departed)` says, clamped.
+`sendConvoy` writes `setOutWith`, the items it left with. `Campaigns.rob(id, maxStacks)` takes
+from the end of `plunder` (the last loaded first), splitting a stack when only part of it fits,
+up to `maxStacks` stacks and never past `setOutWith / 2 - robbed` items; `robbed` adds up every
+theft, so a second robbery reaches no further than the first could have. `setOutWith` and `robbed`
+are saved; a 0.2.2 save reads both as 0, and such a convoy counts as having set out with what it
+holds (`setOut()`, pinned at the first robbery). `arriveWithConvoy` delivers what is left, and when
+`robbed > 0` the war log line and the report carry the `com.colonies_at_war.convoy.robbed` note
+("robbed on the road: 80 of its 160 items taken", resolved on the server, since the log keeps plain
+text) and both colonies are told (`convoy.robbed_told`); a convoy that found nobody brings the rest
+home as before, and one recalled after a robbery carries the note in its "was recalled" report.
+`rob` answers only in the convoy's own dimension, like `convoysOnTheRoad`. Standing is never touched by any of it: the thief calls `offend` himself when his
+man was caught or seen. The bridge's side is `WarBridge.convoysNear(level, at, range)` (one
+`long[]` a convoy: id, sender, receiver or 0 for a kingdom, escort, stacks, x, y, z; the range is
+measured flat, on x and z), `convoyCargo` (copies), `convoyEscort` (the guards, not the courier;
+-1 unknown) and `robConvoy`, each failing soft to an empty answer. `tools/roadgate` proves it on
+the rig.
+
 The manifest is `ConvoyModule`, a `IPersistentModule` + `ITickingModule` + `IAltersRequiredItems`
 on the War Room, and it is MineColonies' minimum stock turned into a one-off order. One
 `ItemStack` line a kind, `add(kind, ±count)` under a cap of `convoyStacks × 3` stacks (a line's
@@ -380,6 +401,5 @@ attack as the source.
 
 ## Not in this cut
 
-Betrayal of an ally costing standing with every third colony that saw it; a convoy as something
-Colonist Thieves can rob on the road (the bridge does not yet name convoys); a Waystation hut and
+Betrayal of an ally costing standing with every third colony that saw it; a Waystation hut and
 a Carter of its own; joint war between allies.

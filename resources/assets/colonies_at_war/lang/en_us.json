@@ -287,5 +287,7 @@
   "com.colonies_at_war.gui.convoy.nothing_found": "Nothing by that name.",
   "com.colonies_at_war.gui.wartable.nothing_loaded": "nothing loaded - Convoy opens the bay",
   "com.colonies_at_war.gui.wartable.loaded": "%s stack(s) loaded at the War Room",
-  "com.colonies_at_war.gui.convoy.find": "Find:"
+  "com.colonies_at_war.gui.convoy.find": "Find:",
+  "com.colonies_at_war.convoy.robbed": " (robbed on the road: %s of its %s items taken)",
+  "com.colonies_at_war.convoy.robbed_told": "Thieves robbed the convoy to %s on the road: %s of its %s items are gone, and only the rest arrives."
 }

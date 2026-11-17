@@ -140,6 +140,13 @@ public class Campaigns extends SavedData {
         public int mercenaries;
         // a convoy: the courier who drives it (0 when the escort carries it), and the goods in `plunder`
         public int courier;
+        /**
+         * A convoy: how many items it set out with, and how many thieves took off it on the road.
+         * The half a thief may take is counted from the first, so robbing it twice does not reach
+         * further. Both read 0 from a 0.2.2 save: such a convoy set out with what it holds now.
+         */
+        public int setOutWith;
+        public int robbed;
 
         public boolean onKingdom() {
             return "kingdom".equals(kind);
@@ -169,6 +176,24 @@ public class Campaigns extends SavedData {
         /** Guards and sellswords together: what stands on the field. */
         public int soldiers() {
             return guards.length + mercenaries;
+        }
+
+        /** A convoy still on its way out: marching, and not yet due (the tick arrives it up to a second late). */
+        public boolean onTheRoad(final long now) {
+            return onConvoy() && phase == Phase.MARCHING && now < arrive;
+        }
+
+        /** Where a convoy is now: on the straight road from its War Room to the target, by the clock. */
+        public BlockPos whereNow(final long now) {
+            final double f = arrive <= departed ? 1.0 : Math.max(0.0, Math.min(1.0, (now - departed) / (double) (arrive - departed)));
+            return BlockPos.containing(warRoom.getX() + (target.getX() - warRoom.getX()) * f,
+                    warRoom.getY() + (target.getY() - warRoom.getY()) * f,
+                    warRoom.getZ() + (target.getZ() - warRoom.getZ()) * f);
+        }
+
+        /** What a convoy set out with, in items. */
+        public int setOut() {
+            return setOutWith > 0 ? setOutWith : Plunder.count(plunder) + robbed;
         }
 
         /** A camp or a village: a place that is nobody's, changed for good or only robbed. */
@@ -339,6 +364,67 @@ public class Campaigns extends SavedData {
             }
         }
         return null;
+    }
+
+    /** The convoys on the road out in this level's dimension, as a copy: the bridge reads them, never the list itself. */
+    public static List<Campaign> convoysOnTheRoad(final ServerLevel level) {
+        final List<Campaign> out = new ArrayList<>();
+        final long now = level.getServer().overworld().getGameTime();
+        final String dimension = level.dimension().location().toString();
+        for (final Campaign c : of(level).campaigns) {
+            if (c.onTheRoad(now) && dimension.equals(c.dimension)) {
+                out.add(c);
+            }
+        }
+        return out;
+    }
+
+    /** The campaign with this id, or null. */
+    public static Campaign byId(final ServerLevel level, final long id) {
+        for (final Campaign c : of(level).campaigns) {
+            if (c.id == id) {
+                return c;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Thieves take goods off a convoy on the road: at most {@code maxStacks} stacks, the last loaded
+     * first, a stack split when only part of it fits - and never past half of what the convoy set
+     * out with, however many times it is robbed. What is taken is gone from the convoy and recorded
+     * on it, so the far end gets only the rest and the arrival says so. Standing is not touched.
+     */
+    public static List<ItemStack> rob(final ServerLevel level, final long id, final int maxStacks) {
+        final List<ItemStack> taken = new ArrayList<>();
+        final Campaigns data = of(level);
+        final Campaign c = byId(level, id);
+        // a convoy on another dimension's road is not on this one's, the same as convoysOnTheRoad sees it
+        if (c == null || maxStacks <= 0 || !c.onTheRoad(level.getServer().overworld().getGameTime())
+                || !level.dimension().location().toString().equals(c.dimension)) {
+            return taken;
+        }
+        // pinned before the first theft, so a convoy from an older save counts its half from here on
+        c.setOutWith = c.setOut();
+        int left = c.setOutWith / 2 - c.robbed;
+        for (int i = c.plunder.size() - 1; i >= 0 && left > 0 && taken.size() < maxStacks; i--) {
+            final ItemStack stack = c.plunder.get(i);
+            final ItemStack part = stack.split(Math.min(stack.getCount(), left));
+            if (stack.isEmpty()) {
+                c.plunder.remove(i);
+            }
+            if (!part.isEmpty()) {
+                left -= part.getCount();
+                c.robbed += part.getCount();
+                taken.add(part);
+            }
+        }
+        if (!taken.isEmpty()) {
+            data.setDirty();
+            Warfare.LOGGER.info("[convoy] {}'s convoy to {} robbed on the road of {} ({} of {} items taken so far)",
+                    c.attackerName, c.defenderName, Plunder.describe(taken), c.robbed, c.setOutWith);
+        }
+        return taken;
     }
 
     /** Sellswords waiting at this colony's War Room. */
@@ -1846,7 +1932,8 @@ public class Campaigns extends SavedData {
         final Campaigns data = of(level);
         final long now = level.getServer().overworld().getGameTime();
         c.won = false;
-        c.report = "was recalled";
+        // a convoy robbed before it was called back keeps saying so
+        c.report = "was recalled" + robbedNote(c);
         // as far as they got is as far as they have to come back
         c.phase = Phase.RETURNING;
         c.home = now + Math.max(EVERY, now - c.departed);
@@ -2160,6 +2247,7 @@ public class Campaigns extends SavedData {
         c.warRoom = room.getPosition();
         c.attack = Battle.attack(escort, room, false);
         c.plunder = goods;
+        c.setOutWith = Plunder.count(goods);
         final long now = level.getServer().overworld().getGameTime();
         final int travelTicks = travelTicks(mine.getCenter(), target);
         c.departed = now;
@@ -2187,6 +2275,11 @@ public class Campaigns extends SavedData {
         return c;
     }
 
+    /** " (robbed on the road: 80 of its 160 items taken)" for a robbed convoy, else "" - in plain text, as the war log keeps it. */
+    private static String robbedNote(final Campaign c) {
+        return c.robbed <= 0 ? "" : Component.translatable("com.colonies_at_war.convoy.robbed", c.robbed, c.setOut()).getString();
+    }
+
     /** A courier from the warehouse, borrowed for the trip - or null, and the escort carries it. */
     private static ICitizenData courier(final IColony mine, final ITravellingManager travel) {
         try {
@@ -2205,19 +2298,28 @@ public class Campaigns extends SavedData {
     private void arriveWithConvoy(final ServerLevel level, final Campaign c, final long now) {
         final IColony mine = colony(level, c.attacker);
         final StringBuilder line = new StringBuilder(c.attackerName + "'s convoy reached " + c.defenderName);
+        // thieves on the road (Colonist Thieves, through the bridge): only what is left arrives, and everyone is told
+        final String robbedNote = robbedNote(c);
+        if (c.robbed > 0) {
+            final Component told = Component.translatable("com.colonies_at_war.convoy.robbed_told", c.defenderName, c.robbed, c.setOut());
+            tell(mine, told, MessageUtils.MessagePriority.IMPORTANT);
+            if (c.defender != 0) {
+                tell(colony(level, c.defender), told, MessageUtils.MessagePriority.IMPORTANT);
+            }
+        }
         if (c.defender != 0) {
             final IColony them = colony(level, c.defender);
             if (them == null || mine == null) {
-                c.report = "found nobody at " + c.defenderName;
-                line.append(" and found nobody");
+                c.report = "found nobody at " + c.defenderName + robbedNote;
+                line.append(" and found nobody").append(robbedNote);
             } else {
                 final String goods = Plunder.describe(c.plunder);
                 Plunder.deliver(level, them, warRoom(them), c.plunder);
-                line.append(" with ").append(goods);
+                line.append(" with ").append(goods).append(robbedNote);
                 c.plunder = new ArrayList<>();
                 Standing.mend(mine, c.defender, WarConfig.convoyStanding());
                 line.append(" - standing now ").append(Standing.between(mine, c.defender));
-                c.report = "delivered";
+                c.report = "delivered" + robbedNote;
                 c.won = true;
                 tell(them, "A convoy from " + c.attackerName + " has arrived with " + goods + ".", MessageUtils.MessagePriority.IMPORTANT);
                 tell(mine, "The convoy has reached " + c.defenderName + " and the goods are in their warehouse. Standing is now "
@@ -2226,10 +2328,10 @@ public class Campaigns extends SavedData {
         } else {
             final Object kingdom = Kingdoms.at(level, c.target);
             if (kingdom == null || mine == null) {
-                c.report = "found no kingdom where " + c.defenderName + " stood";
-                line.append(" and found nobody");
+                c.report = "found no kingdom where " + c.defenderName + " stood" + robbedNote;
+                line.append(" and found nobody").append(robbedNote);
             } else {
-                line.append(" with ").append(Plunder.describe(c.plunder));
+                line.append(" with ").append(Plunder.describe(c.plunder)).append(robbedNote);
                 c.plunder = new ArrayList<>();
                 Kingdoms.favour(level, kingdom, WarConfig.convoyStanding(), "convoy");
                 int forgiven = 0;
@@ -2243,7 +2345,7 @@ public class Campaigns extends SavedData {
                 if (forgiven > 0) {
                     line.append("; the debt is forgiven");
                 }
-                c.report = "delivered";
+                c.report = "delivered" + robbedNote;
                 c.won = true;
                 tell(mine, "The convoy has reached " + c.defenderName + ". Its standing is now " + Kingdoms.standing(kingdom)
                         + (forgiven > 0 ? ", and its men will not come for you after all." : "."), MessageUtils.MessagePriority.IMPORTANT);
@@ -2306,11 +2408,15 @@ public class Campaigns extends SavedData {
     // ------------------------------------------------------------------ messages
 
     private static void tell(final IColony colony, final String text, final MessageUtils.MessagePriority priority) {
+        tell(colony, Component.literal(text), priority);
+    }
+
+    private static void tell(final IColony colony, final Component text, final MessageUtils.MessagePriority priority) {
         if (colony == null) {
             return;
         }
         try {
-            MessageUtils.format(Component.literal(text)).withPriority(priority).sendTo(colony).forManagers();
+            MessageUtils.format(text).withPriority(priority).sendTo(colony).forManagers();
         } catch (final Throwable t) {
             Warfare.LOGGER.debug("[campaign] could not message {}: {}", colony.getName(), t.toString());
         }
@@ -2364,6 +2470,9 @@ public class Campaigns extends SavedData {
             c.lostToGuards = one.getInt("lostToGuards");
             c.carried = one.getInt("carried");
             c.courier = one.getInt("courier");
+            // 0.3.0: a convoy's load and what thieves took; a missing tag (an older save) reads 0, not robbed
+            c.setOutWith = one.getInt("setOutWith");
+            c.robbed = one.getInt("robbed");
             for (final Tag s : one.getList("plunder", Tag.TAG_COMPOUND)) {
                 final ItemStack stack = ItemStack.parseOptional(provider, (CompoundTag) s);
                 if (!stack.isEmpty()) {
@@ -2481,6 +2590,8 @@ public class Campaigns extends SavedData {
             one.putInt("lostToGuards", c.lostToGuards);
             one.putInt("carried", c.carried);
             one.putInt("courier", c.courier);
+            one.putInt("setOutWith", c.setOutWith);
+            one.putInt("robbed", c.robbed);
             final ListTag goods = new ListTag();
             for (final ItemStack stack : c.plunder) {
                 if (!stack.isEmpty()) {
