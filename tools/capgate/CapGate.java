@@ -381,7 +381,24 @@ public final class CapGate {
         final List<LivingEntity> men = men(raid);
         final LivingEntity captain = marked.get(0);
         w.captain = captain;
-        w.title = captain.getCustomName();
+        // the shown name is the title wrapped in an empty plain text (Captains.nameplate): MineColonies'
+        // melee AI turns a translatable raider name into a damage type and the blow throws
+        final Component shown = captain.getCustomName();
+        w.title = shown != null && shown.getSiblings().size() == 1 ? shown.getSiblings().get(0) : shown;
+        check("the captain of the " + w.label + " can land a blow (his name is no translation key)",
+                shown != null && !(captain.getName().getContents() instanceof TranslatableContents),
+                shown == null ? "no name" : shown.getContents().getClass().getSimpleName());
+        boolean soldiersOk = true;
+        int soldiers = 0;
+        for (final net.minecraft.world.entity.Entity man : men) {
+            if (man != captain && man.hasCustomName()) {
+                soldiers++;
+                soldiersOk &= !(man.getName().getContents() instanceof TranslatableContents);
+            }
+        }
+        if (soldiers > 0) {
+            check("the named men of the " + w.label + " can land a blow too", soldiersOk, soldiers + " named men");
+        }
         w.checked = true;
         w.checkedAt = tick;
         check("one captain in the " + w.label, marked.size() == 1, marked.size() + " of " + men.size() + " men");

@@ -197,12 +197,12 @@ public class ArmyRaidEvent extends HordeRaidEvent {
             // again the health, double the armour and a point of damage over the men
             raider.initStatsFor(soldierHealth, soldierArmour, soldierDamage);
             if (Captains.isCaptain(raider)) {
-                raider.setCustomName(Captains.title(raider));
+                raider.setCustomName(Captains.nameplate(Captains.title(raider)));
                 raider.setCustomNameVisible(true);
             } else {
                 outfit(raider);
-                raider.setCustomName(attackerName.isEmpty() ? Component.translatable("com.colonies_at_war.army.soldier_nameless")
-                        : Component.translatable("com.colonies_at_war.army.soldier", attackerName));
+                raider.setCustomName(Captains.nameplate(attackerName.isEmpty() ? Component.translatable("com.colonies_at_war.army.soldier_nameless")
+                        : Component.translatable("com.colonies_at_war.army.soldier", attackerName)));
                 raider.setCustomNameVisible(false);
             }
         } catch (final Throwable t) {

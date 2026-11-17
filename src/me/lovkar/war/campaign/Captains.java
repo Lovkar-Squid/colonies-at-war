@@ -400,6 +400,17 @@ public class Captains extends SavedData {
         return given;
     }
 
+    /**
+     * A name to hang over a raider's head. MineColonies' raider attack AI reads the name of the
+     * attacker and, when it is a translatable text, turns its key into a damage type
+     * ("minecolonies:<key>"); a key of ours names no damage type, the attack throws and the raider
+     * never lands a blow. Wrapped in an empty plain text the name still translates on every client,
+     * and the attack falls back to an ordinary mob attack.
+     */
+    public static Component nameplate(final Component name) {
+        return Component.empty().append(name);
+    }
+
     /** The bar over his head, while he has one. For the rig and for anybody who wants to know. */
     public static ServerBossEvent bar(final UUID captain) {
         final Field field = fields.get(captain);
@@ -582,7 +593,7 @@ public class Captains extends SavedData {
         }
         man.getPersistentData().put(TAG, mark);
         final Component title = title(mark);
-        man.setCustomName(title);
+        man.setCustomName(nameplate(title));
         man.setCustomNameVisible(true);
         if (man instanceof Mob mob) {
             arm(level, mob, men);
