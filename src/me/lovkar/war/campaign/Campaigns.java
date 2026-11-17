@@ -44,8 +44,10 @@ import net.neoforged.neoforge.items.IItemHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 /**
  * The warbands that are out, and everything that happens to them.
@@ -117,6 +119,16 @@ public class Campaigns extends SavedData {
         public boolean won;
         public float margin;
         public String report = "";
+        /**
+         * A village's guards (Guard Villagers'): how many stood against the warband, and how many of
+         * them fell. Kept for the village's answer; 0 for every other target and for an older save.
+         */
+        public int villageGuards;
+        public int villageGuardsFell;
+        /** Men the warband lost to those guards: its sellswords killed first, then its own guards carried home. */
+        public int lostToGuards;
+        /** How many of the warband's own guards come home carried, at the end of their strength. */
+        public int carried;
         public List<ItemStack> plunder = new ArrayList<>();
         // an expedition: the biome it went to, its family, how hard, who led it, what they killed
         public String biome = "";
@@ -1197,11 +1209,15 @@ public class Campaigns extends SavedData {
         if (c.approach.equals(BlockPos.ZERO)) {
             c.approach = mine.getCenter();
         }
-        final Battle battle = Battle.roll(c.attack, Places.defence(level, place), level.getRandom());
+        final Places.Defenders there = Places.defenders(level, place);
+        final Battle battle = Battle.roll(c.attack, Places.defence(level, place, there), level.getRandom());
         c.fought = true;
         c.won = battle.won();
         c.margin = battle.margin();
         c.report = battle.report(place.isCamp() ? "the camp" : "the village");
+        if (!place.isCamp() && there.guards() > 0) {
+            c.report += "; " + fightGuards(c, there.guards());
+        }
         final StringBuilder line = new StringBuilder(c.attackerName + "'s warband " + c.report + " at " + c.defenderName);
         if (c.won) {
             c.plunder = Plunder.roll(level, Places.plunderTable(place), Places.wealth(place), c.target, c.margin, true, level.getRandom());
@@ -1221,6 +1237,37 @@ public class Campaigns extends SavedData {
         log.add(level, c.attacker, 0, line.toString());
         Warfare.LOGGER.info("[campaign] {}", line);
         turnHome(level, c, now, c.target, c.warRoom);
+    }
+
+    /**
+     * A village's guards fought the warband: some of them fell, and the warband lost men to them -
+     * its sellswords first, who are paid to die, then its own guards, who come home carried at the
+     * end of their strength rather than dead: a fight nobody watched does not kill a colonist.
+     *
+     * @return the battle report's words for it
+     */
+    private static String fightGuards(final Campaign c, final int had) {
+        c.villageGuards = had;
+        c.villageGuardsFell = Battle.guardsFell(had, c.won, c.margin);
+        c.lostToGuards = Battle.lostToGuards(c.soldiers(), had, c.won);
+        final int swords = Math.min(c.mercenaries, c.lostToGuards);
+        c.mercenaries -= swords;
+        c.carried = c.lostToGuards - swords;
+        final StringBuilder out = new StringBuilder();
+        out.append(had).append(had == 1 ? " village guard" : " village guards").append(" stood against it and ")
+                .append(c.villageGuardsFell).append(" fell");
+        if (c.lostToGuards > 0) {
+            out.append("; it lost ").append(c.lostToGuards).append(c.lostToGuards == 1 ? " man (" : " men (");
+            if (swords > 0) {
+                out.append(swords).append(swords == 1 ? " sellsword" : " sellswords").append(" killed");
+            }
+            if (c.carried > 0) {
+                out.append(swords > 0 ? ", " : "").append(c.carried).append(c.carried == 1 ? " guard" : " guards")
+                        .append(" carried home");
+            }
+            out.append(')');
+        }
+        return out.toString();
     }
 
     /** The kingdom writes the colony down: its men will come, sooner and more of them after a sack. */
@@ -1704,6 +1751,11 @@ public class Campaigns extends SavedData {
         final BlockPos door = room == null ? mine.getCenter() : room.getPosition();
         int back = 0;
         int away = 0;
+        // the guards a village's guards cut down come home carried: the last ones of the warband
+        final Set<Integer> carried = new HashSet<>();
+        for (int i = c.guards.length - 1; i >= 0 && carried.size() < c.carried; i--) {
+            carried.add(c.guards[i]);
+        }
         for (final int id : c.everyone()) {
             final ICitizenData guard = mine.getCitizenManager().getCivilian(id);
             if (guard == null) {
@@ -1723,7 +1775,7 @@ public class Campaigns extends SavedData {
                     if (c.fought) {
                         // a fight lost hurts; an expedition wears the men down by how hard it was
                         final float share = c.onExpedition() ? (c.won ? 1f - 0.1f * c.difficulty : 0.35f) : c.won ? 0.8f : 0.35f;
-                        e.setHealth(Math.max(1f, e.getMaxHealth() * share));
+                        e.setHealth(carried.contains(id) ? 1f : Math.max(1f, e.getMaxHealth() * share));
                         // veterans: a fight teaches, a fight won teaches more - through MineColonies'
                         // own experience handler, so it lands on the guard job's own skills
                         final double xp = WarConfig.campaignExperience() * (c.won ? 1.5 : 1.0);
@@ -2306,6 +2358,11 @@ public class Campaigns extends SavedData {
             c.explorer = one.getInt("explorer");
             c.bestiary = one.getString("bestiary");
             c.mercenaries = one.getInt("mercenaries");
+            // 0.3.0: a village's guards; a missing tag (an older save) reads 0
+            c.villageGuards = one.getInt("villageGuards");
+            c.villageGuardsFell = one.getInt("villageGuardsFell");
+            c.lostToGuards = one.getInt("lostToGuards");
+            c.carried = one.getInt("carried");
             c.courier = one.getInt("courier");
             for (final Tag s : one.getList("plunder", Tag.TAG_COMPOUND)) {
                 final ItemStack stack = ItemStack.parseOptional(provider, (CompoundTag) s);
@@ -2419,6 +2476,10 @@ public class Campaigns extends SavedData {
             one.putInt("explorer", c.explorer);
             one.putString("bestiary", c.bestiary);
             one.putInt("mercenaries", c.mercenaries);
+            one.putInt("villageGuards", c.villageGuards);
+            one.putInt("villageGuardsFell", c.villageGuardsFell);
+            one.putInt("lostToGuards", c.lostToGuards);
+            one.putInt("carried", c.carried);
             one.putInt("courier", c.courier);
             final ListTag goods = new ListTag();
             for (final ItemStack stack : c.plunder) {

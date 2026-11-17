@@ -45,6 +45,7 @@ public final class WarConfig {
     private static final ModConfigSpec.IntValue KINGDOM_STANDING_COST;
     private static final ModConfigSpec.BooleanValue KINGDOMS_STRIKE_BACK;
     private static final ModConfigSpec.BooleanValue MARCH_ON_CAMPS;
+    private static final ModConfigSpec.IntValue VILLAGE_GUARD_WEIGHT;
     private static final ModConfigSpec.IntValue CAMPAIGN_EXPERIENCE;
     private static final ModConfigSpec.BooleanValue CAPTIVES;
     private static final ModConfigSpec.IntValue RANSOM_GOLD;
@@ -165,6 +166,11 @@ public final class WarConfig {
                 .comment("A warband may march on a raider camp (the camp is cleared - its spawners smashed) or a",
                         "village (robbed). What counts as which is the structure tags #colonies_at_war:camp and :village.")
                 .define("marchOnCamps", true);
+        VILLAGE_GUARD_WEIGHT = builder
+                .comment("What one of Guard Villagers' guards adds to a village's defence (an iron golem adds 15, a",
+                        "villager 2). A warband that fights a village with guards loses men to them. Without Guard",
+                        "Villagers installed this does nothing.")
+                .defineInRange("villageGuardWeight", 12, 0, 60);
         KINGDOMS_STRIKE_BACK = builder
                 .comment("A kingdom that was marched on sends its own men to the colony some days later - a real raid,",
                         "fought when somebody is there. Off, and a kingdom only holds a grudge.")
@@ -420,6 +426,14 @@ public final class WarConfig {
             return MARCH_ON_CAMPS.get();
         } catch (final Throwable t) {
             return true;
+        }
+    }
+
+    public static int villageGuardWeight() {
+        try {
+            return VILLAGE_GUARD_WEIGHT.get();
+        } catch (final Throwable t) {
+            return 12;
         }
     }
 
