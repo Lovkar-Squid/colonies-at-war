@@ -175,6 +175,9 @@ public final class Places {
         int armed = 0;
         int folk = 0;
         for (final Mob mob : level.getEntitiesOfClass(Mob.class, box, Mob::isAlive)) {
+            if (mob instanceof com.minecolonies.api.entity.citizen.AbstractEntityCitizen) {
+                continue;                         // a colony's people beside the place are not its defenders
+            }
             if (isVillageGuard(mob, guard)) {
                 guards++;
             } else if (mob instanceof IronGolem) {
