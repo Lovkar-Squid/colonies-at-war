@@ -344,10 +344,11 @@ Stonebrook at once. Each got one named captain — the chief of the first two, t
 the third — in iron over stone-axe men (the chiefs keeping their chief swords), drop chances 0,
 27/27 on a base of 13.5, 60/60 on 30, 40/40 against his men's 20, and a red bar at 1.0 that read 0.5
 at half health; a chief sent to Stonebrook afterwards stayed a soldier. Killed by a fake player's
-attack, each dropped exactly one named banner with both lore lines and none of his armour, his bar
-went, a second death and a second call of the drops hook dropped nothing, and five seconds later
-nobody had been promoted in his place. The same run with `captainTrophy = weapon` dropped the
-chief swords and the iron axe, named. MineColonies treats a fake player's blow like the weather —
+attack, each dropped exactly one named trophy with both lore lines (the colony's name, the colony's
+day) and none of his armour, his bar went, a second death and a second call of the drops hook
+dropped nothing, and five seconds later nobody had been promoted in his place. The gate sets
+`captainTrophy` itself before each kill, so one run proves both kinds: banners from the two
+chiefs, the iron axe from Stonebrook's captain. MineColonies treats a fake player's blow like the weather —
 it can wound a raider, never kill him — so the gate's killing blow is `die` with the fake player's
 attack as the source.
 
