@@ -131,6 +131,15 @@ public final class Plunder {
         return stored;
     }
 
+    /** How many items, over all the stacks. */
+    public static int count(final List<ItemStack> goods) {
+        int count = 0;
+        for (final ItemStack stack : goods) {
+            count += stack.getCount();
+        }
+        return count;
+    }
+
     /** One line for the log: "48 items - iron ingot, bread, oak planks". */
     public static String describe(final List<ItemStack> goods) {
         if (goods.isEmpty()) {
