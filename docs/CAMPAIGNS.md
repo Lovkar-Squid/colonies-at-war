@@ -24,7 +24,9 @@ At arrival the battle is one of two things, and both feed the same outcome:
   "Warband of <colony> — from the north", the soldiers are MineColonies raider mobs re-statted
   from the **attacker's** guards (never from the defender's raid level, which is what MineColonies
   does by default). Their guards fight it. Survivors decide: wiped out = the defence held; still
-  standing when the night ends = the town was overrun.
+  standing when the night ends = the town was overrun. Since 0.3.0 one of them is the warband's
+  named captain ("Captain Aldric of Ironhold" — see *Captains* below); the rest are "Soldier of
+  Ironhold", a chief who is not the captain included.
 - **nobody is there** → the siege is a number. `Battle.roll`: attack against defence with luck
   that scales with the size of the fight, the thief's `Heist.roll` shape.
 
@@ -131,7 +133,8 @@ Waking World's own consequences); a sack costs the same again, three days of ang
 folds into it (bigger, not a second raid). Due after `reprisalDays` (half that for a sack),
 `size = 2 + tier*2 + catapults` (+`tier*2` for a sack, 3..16), strength at least the kingdom's
 defence. It is paid only when the colony is ACTIVE and loaded — a raid nobody sees is not revenge —
-as an `ArmyRaidEvent` with `attacker = 0`, `attackerName` the kingdom's, `campaign = -id`; the
+as an `ArmyRaidEvent` with `attacker = 0`, `attackerName` the kingdom's, `campaign = -id` (its
+captain is "Captain <name> of <kingdom>", his trophy the kingdom's purple and gold); the
 event's finish routes negative ids to `reprisalEnded`. The kingdom's men still standing at the end
 (`Battle.fought`) carry `plunderRolls*2` stacks (16 each) out of the warehouses and `Breach` the
 wall from the direction of the keep. Unpaid for a week, the debt is forgotten; standing at a town
@@ -290,6 +293,63 @@ a convoy with two guards that carried the manifest and nothing else — the torc
 warehouse untouched — delivered and the standing up by eight, the half line kept wanted, the bay
 torn up with its request gone, the escort home unhurt, the weekly cap and the closed road at war,
 the alliance broken to nothing; everything saved and read back.
+
+## Captains — one man at the head of every raid (0.3.0)
+
+`campaign/Captains`. Every `IColonyRaidEvent` with men in the world gets one captain: the warband,
+a kingdom's reprisal, MineColonies' barbarians, pirates (on the ground, by ship, drowned),
+Egyptians, Norsemen and Amazons, and whatever raid another mod adds. Nothing hooks into a raid —
+MineColonies' events are theirs, and a mixin into each would break every month — so twice a second
+each colony's events are copied and looked at from outside, the way `RaidAlarm` finds raiders.
+
+- **One per raid, ever.** A line per raid in the `colonies_at_war_captains` SavedData on the
+  overworld, keyed `<dimension>/<colony>/<event>`, says it has had its captain; a raid with a line is
+  never given another, dead captain or not. Lines go when the event leaves the colony's event map.
+  An old save has no such file: an empty one.
+- **Who.** The event's boss raider type (or an `IChiefMobEntity`) at once. Failing that, after 100
+  ticks — a ship lands its crew a few at a time — the first (lowest entity id) ordinary melee raider:
+  the event's normal raider type or an `IMeleeMobEntity`, never an archer; failing even him, anyone.
+  A boss who arrives later is a soldier.
+- **Name.** Lang keys, twelve a list: barbarian, pirate (the drowned too), Egyptian, Norse, Amazon,
+  and plain names for a warband or an army, which are "Captain <name> of <attacker>". Picked by a
+  hash of dimension, colony and event, stepped past any name a captain of another raid on the same
+  colony already has. `ArmyRaidEvent.registerEntity` gives a returning captain his own name back,
+  the other men "Soldier of <attacker>" (a lang key now, too).
+- **Gear.** A ladder: wood/leather 0, stone/chainmail 1, iron 2, diamond 3, netherite 4. The men's
+  tier is the best piece any of them has on, and men with nothing tiered count as stone. The captain
+  gets a full armour set and a weapon at the men's tier + 1 (an axe for an axe-man, else a sword); a
+  weapon already as good stays (MineColonies' chief sword is diamond-tier), and a bow, crossbow,
+  spear or the pharaoh's scepter stays with Power I or Sharpness I. Drop chance 0 on the four
+  armour slots and the main hand: his kit is not farmable. A chief's own loot table is untouched.
+- **Health.** A `colonies_at_war:captain_health` modifier, `ADD_MULTIPLIED_BASE`,
+  `captainExtraHealth / 100`. A modifier, not a base: MineColonies re-stats every raider on a
+  reload and the warband re-stats on every registration, and both only set the base.
+- **Bar.** A `ServerBossEvent`, red, progress = health, for players within 64 blocks, brought up to
+  date every 10 ticks. It goes on his death, on `EntityLeaveLevelEvent` (unload, despawn, the raid's
+  own clean-up) and when his event is done, cancelled or gone; it comes back on
+  `EntityJoinLevelEvent`, and from the scan for a captain whose chunk came in before his colony's raids.
+- **The mark.** Compound `colonies_at_war_captain` in the entity's persistent data: colony, event,
+  name key, attacker name and id, raid kind, `fell`, `trophy`. It is what brings him back as himself.
+- **His fall.** `LivingDeathEvent` at LOWEST, not when cancelled: one line to the colony's players,
+  once (`fell`). A `DamageSourceKeys.DESPAWN` death — MineColonies' own after a long night — is no
+  fall. `LivingDropsEvent`: the trophy, when the killer (the source's entity, else the kill credit)
+  is a player or a citizen whose job `isGuard()`, mob loot is on, and neither the mark nor the saved
+  line says it has dropped. A banner, a design per raid kind — a warband's is its colony's flag on its
+  team colour — or with `captainTrophy = weapon` a copy of his main hand; named "Banner of <name>"
+  or "Weapon of <name>", lore: the raid, the colony, the colony's day.
+
+Proven headless (`tools/capgate`, NeoForge 21.1.249, MineColonies 1.1.1420): MineColonies' own
+barbarian raid started through its raid manager, a warband of Ironhold and a chiefless warband of
+Stonebrook at once. Each got one named captain — the chief of the first two, the first barbarian of
+the third — in iron over stone-axe men (the chiefs keeping their chief swords), drop chances 0,
+27/27 on a base of 13.5, 60/60 on 30, 40/40 against his men's 20, and a red bar at 1.0 that read 0.5
+at half health; a chief sent to Stonebrook afterwards stayed a soldier. Killed by a fake player's
+attack, each dropped exactly one named banner with both lore lines and none of his armour, his bar
+went, a second death and a second call of the drops hook dropped nothing, and five seconds later
+nobody had been promoted in his place. The same run with `captainTrophy = weapon` dropped the
+chief swords and the iron axe, named. MineColonies treats a fake player's blow like the weather —
+it can wound a raider, never kill him — so the gate's killing blow is `die` with the fake player's
+attack as the source.
 
 ## Not in this cut
 

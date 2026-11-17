@@ -87,6 +87,27 @@ The second bell, a research under *Find the Raiders*: posted guards leave their 
 raider within forty-eight blocks of them, not only for one that has got behind them — and go
 back when he is dead. Costs two bells and eight iron.
 
+## Named captains
+
+Every raid on a colony is led by somebody. MineColonies' barbarians, pirates, Egyptians, Norsemen,
+Amazons and drowned pirates, a neighbour's warband and a kingdom's men all bring **one captain** a
+raid: the raid's chief when it brought one, otherwise its first fighting man, promoted. He has a
+name — *Thrain Skullsplitter*, *Red Nell Tasker*, *Captain Aldric of Ironhold* — and the town is told
+when he takes the field ("Thrain Skullsplitter leads the barbarian raid against Ironhold!") and
+again when he falls. He wears a full set of armour and carries a weapon a tier above the best his
+men have (none of it ever drops: a captain is not a mine), double the health the raid gave him, and anybody
+within 64 blocks of him sees a red bar with his name and how much of him is left. A chief who turns
+up after a captain has been made stays a soldier, and a raid whose captain is dead does not get
+another.
+
+Kill him — a player or any colony guard — and he leaves **a trophy**, once: the banner of his raid,
+named for him, saying which raid on which colony and on what day of the colony he fell (a warband's
+banner is its own colony's flag). A server that would rather hand out his weapon says so. He comes
+back from a restart as himself, bar and all.
+
+Config, the `captains` block: `captains` (on/off), `captainExtraHealth` (percent, 100),
+`captainBossBar`, `captainTrophy` (`banner` or `weapon`).
+
 ## The Explorer, and expeditions
 
 The one person in the War Room who goes out to look rather than to fight. Hire an **Explorer**
@@ -205,7 +226,8 @@ happens at the other end depends on who is there:
 - **Somebody is watching the town** — a real raid. The warband stands in the defender's Town Hall
   beside any barbarian horde, raises the same boss bar ("Warband of Ironhold — from the north"),
   and is fought by the same guards. Its soldiers are MineColonies raider mobs statted from the
-  **attacking** colony's men, not from the defender's raid level, and carry the attacker's name.
+  **attacking** colony's men, not from the defender's raid level, and carry the attacker's name;
+  one of them is its captain, *Captain Aldric of Ironhold*, with his colony's flag for a trophy.
   Half of them still standing when the siege's time is up — the next nightfall, by default — is a
   town overrun; fewer is a defence that held.
 - **Nobody is** — a number: the warband's strength against the town's, with luck the size of the
@@ -232,7 +254,7 @@ colony's owner — its guards turn on him within reach, its traders refuse him, 
 him — and its standing with him falls; a sack costs twice as much and carries off the keep's gold.
 
 **And the kingdom strikes back.** Some days after an attack its men come to the colony: a real
-raid at the walls, fought by the colony's guards, the next time somebody is there — more of them
+raid at the walls, led by a captain of the kingdom's, fought by the colony's guards, the next time somebody is there — more of them
 and sooner after a sack, forgotten if nobody is home for a week. If they have their way they carry
 goods out of the warehouse and break the wall. `/war campaigns` says when they are due.
 
