@@ -1,25 +1,40 @@
 package me.lovkar.war.campaign;
 
+import me.lovkar.war.WarConfig;
 import me.lovkar.war.Warfare;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Holder;
 import net.minecraft.core.HolderSet;
 import net.minecraft.core.Registry;
+import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.tags.TagKey;
+import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.EntityType;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.entity.ambient.AmbientCreature;
+import net.minecraft.world.entity.animal.AbstractGolem;
+import net.minecraft.world.entity.animal.Animal;
 import net.minecraft.world.entity.animal.IronGolem;
+import net.minecraft.world.entity.animal.WaterAnimal;
+import net.minecraft.world.entity.monster.Enemy;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.ProjectileWeaponItem;
+import net.minecraft.world.item.component.ItemAttributeModifiers;
 import net.minecraft.world.level.ChunkPos;
-import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.levelgen.structure.BoundingBox;
 import net.minecraft.world.level.levelgen.structure.Structure;
 import net.minecraft.world.level.levelgen.structure.StructureStart;
 import net.minecraft.world.phys.AABB;
 
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
@@ -30,8 +45,10 @@ import java.util.Set;
  * <p>What a camp or a village is comes off two structure tags, {@code #colonies_at_war:camp}
  * and {@code #colonies_at_war:village}, the same way Colonist Thieves finds somewhere to rob - a
  * datapack can make any structure in any mod a target without touching this class. They ship with
- * MineColonies' barbarian, amazon and desert camps, its pirate ship, the pillager outpost, and
- * every vanilla village.</p>
+ * MineColonies' barbarian, amazon and desert camps, its pirate ship, the pillager outpost, every
+ * vanilla village, and - each only when its mod is there - the camps, outposts and castles of
+ * Kings &amp; Monsters, IFC-Integrations and Valarian Conquest, the kobold den and the dwarf
+ * village. Whoever stands in them is counted by what he does, not by which mod he comes from.</p>
  *
  * <p>A camp is the one target a warband changes for good: its spawners are the camp, and a
  * warband that overruns it smashes them. A village only loses what the men carry off.</p>
@@ -66,7 +83,7 @@ public final class Places {
         for (final String kind : new String[] {CAMP, VILLAGE}) {
             final ResourceLocation found = structureOf(level, pos, kind);
             if (found != null) {
-                return new Place(kind, pos, pretty(found), found);
+                return new Place(kind, pos, nameOf(found), found);
             }
         }
         return null;
@@ -88,25 +105,107 @@ public final class Places {
 
     // ------------------------------------------------------------------ what it is worth
 
+    /** Guard Villagers' guard, by its entity id only: nothing of that mod is ever named here. */
+    public static final ResourceLocation VILLAGE_GUARD = ResourceLocation.fromNamespaceAndPath("guardvillagers", "guard");
+
+    /** Who stands in a place, each counted once: a guard, a golem, an armed man, or one of its folk. */
+    public record Defenders(int guards, int golems, int armed, int folk) {
+        public static final Defenders NONE = new Defenders(0, 0, 0, 0);
+    }
+
+    /**
+     * Guard Villagers' guard type, or null when that mod is not installed. Through the optional
+     * lookup: the entity registry has a default (the pig), and a plain get would hand that back for
+     * a mod that is not there.
+     */
+    public static EntityType<?> villageGuardType() {
+        return BuiltInRegistries.ENTITY_TYPE.getOptional(VILLAGE_GUARD).orElse(null);
+    }
+
+    /** Whether this is one of Guard Villagers' guards. */
+    public static boolean isVillageGuard(final Entity entity, final EntityType<?> guard) {
+        return guard != null && entity.getType() == guard;
+    }
+
+    /**
+     * Whether a mob holds something to fight with: a bow or a crossbow, or anything that adds to
+     * its attack - a sword, an axe, a trident, a mace, or another mod's weapon, which says so
+     * through the same attribute even when it is no vanilla weapon class.
+     */
+    public static boolean holdsWeapon(final Mob mob) {
+        final ItemStack held = mob.getMainHandItem();
+        if (held.isEmpty()) {
+            return false;
+        }
+        if (held.getItem() instanceof ProjectileWeaponItem) {
+            return true;
+        }
+        for (final ItemAttributeModifiers.Entry entry : held.getOrDefault(DataComponents.ATTRIBUTE_MODIFIERS, ItemAttributeModifiers.EMPTY).modifiers()) {
+            if (entry.attribute().is(Attributes.ATTACK_DAMAGE) && entry.modifier().amount() > 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Whether a mob is one of a place's people: alive, not hostile and not a beast - villagers, a
+     * wandering trader, kobolds, dwarves - whatever mod it comes from.
+     */
+    private static boolean isFolk(final Mob mob) {
+        return !(mob instanceof Enemy) && !(mob instanceof Animal) && !(mob instanceof WaterAnimal)
+                && !(mob instanceof AmbientCreature) && !(mob instanceof AbstractGolem);
+    }
+
+    /**
+     * Who stands in the place, when its ground is loaded (nobody is counted otherwise): within a
+     * fixed reach of the place, and the whole of the structure's own box with a little round it
+     * when the structure can be read - a big village is wider than any fixed reach.
+     */
+    public static Defenders defenders(final ServerLevel level, final Place place) {
+        if (!level.isPositionEntityTicking(place.pos())) {
+            return Defenders.NONE;
+        }
+        final StructureStart start = startOf(level, place);
+        final AABB reach = new AABB(place.pos()).inflate(REACH);
+        final AABB box = start != null ? AABB.of(start.getBoundingBox()).inflate(8).minmax(reach) : reach;
+        final EntityType<?> guard = villageGuardType();
+        int guards = 0;
+        int golems = 0;
+        int armed = 0;
+        int folk = 0;
+        for (final Mob mob : level.getEntitiesOfClass(Mob.class, box, Mob::isAlive)) {
+            if (isVillageGuard(mob, guard)) {
+                guards++;
+            } else if (mob instanceof IronGolem) {
+                golems++;
+            } else if (mob instanceof Enemy || holdsWeapon(mob)) {
+                armed++;
+            } else if (isFolk(mob)) {
+                folk++;
+            }
+        }
+        return new Defenders(guards, golems, armed, folk);
+    }
+
     /**
      * What stands against a warband there. A camp is its spawners, five apiece over a base of
-     * twenty, and whoever is awake around them; a village is its golems and its people. Neither is
-     * a kingdom: a large barbarian camp with eight spawners comes to sixty, a hamlet to about thirty.
+     * twenty, and its armed men, three apiece, whatever mod they come from (a Guard Villagers guard
+     * who stands in a camp is one of them); a village is its iron golems (fifteen), Guard Villagers'
+     * guards ({@link WarConfig#villageGuardWeight()}, twelve by default), its armed men (three) and
+     * its people (two). Neither is a kingdom: a large barbarian camp with eight spawners comes to
+     * sixty, a hamlet to about thirty.
      */
     public static int defence(final ServerLevel level, final Place place) {
-        int armed = 0;
-        int golems = 0;
-        int folk = 0;
-        if (level.isPositionEntityTicking(place.pos())) {
-            final AABB box = new AABB(place.pos()).inflate(REACH);
-            armed = level.getEntitiesOfClass(Monster.class, box, m -> m.isAlive()).size();
-            golems = level.getEntitiesOfClass(IronGolem.class, box, g -> g.isAlive()).size();
-            folk = level.getEntitiesOfClass(Villager.class, box, v -> v.isAlive()).size();
-        }
+        return defence(level, place, defenders(level, place));
+    }
+
+    /** The same, from defenders already counted. */
+    public static int defence(final ServerLevel level, final Place place, final Defenders d) {
         if (place.isCamp()) {
-            return 20 + spawnersIn(level, place, false) * 5 + armed * 3;
+            return 20 + spawnersIn(level, place, false) * 5 + (d.armed() + d.guards()) * 3;
         }
-        return Math.max(20, 12 + golems * 15 + folk * 2 + armed * 3);
+        return Math.max(20, 12 + d.golems() * 15 + d.guards() * WarConfig.villageGuardWeight() + d.folk() * 2 + d.armed() * 3);
     }
 
     /** A place's wealth in the thief's units: a camp is worth a little, a village a little less. */
@@ -226,17 +325,40 @@ public final class Places {
         }
     }
 
-    /** "minecolonies:barbarian_camp" reads as "Barbarian Camp". */
-    private static String pretty(final ResourceLocation id) {
-        final StringBuilder out = new StringBuilder();
-        for (final String w : id.getPath().split("_")) {
-            if (w.isEmpty()) {
-                continue;
+    /**
+     * The words a structure's id may end on that say where it stands and not what it is: a mod
+     * that makes one outpost per biome names them "ogre_outpost_plains", "ogre_outpost_swamp".
+     */
+    private static final Set<String> WHERE_WORDS = Set.of("plains", "swamp", "desert", "savanna", "taiga", "snowy", "jungle",
+            "forest", "badlands", "mesa", "mountain", "mountains", "beach", "ocean", "tundra", "birch", "mangrove", "cherry",
+            "meadow", "grove", "cold", "warm");
+
+    /**
+     * A structure's own name, out of its id: "minecolonies:barbarian_camp" reads "Barbarian Camp",
+     * "kingsandmonsters:ogre_outpost_plains" reads "Ogre Outpost" and "valarian_conquest:bandit_ruins_2"
+     * reads "Bandit Ruins" - a trailing biome word or number is dropped, as long as a word is left.
+     */
+    public static String nameOf(final ResourceLocation id) {
+        final String path = id.getPath().substring(id.getPath().lastIndexOf('/') + 1);
+        final List<String> words = new ArrayList<>();
+        for (final String w : path.split("_")) {
+            if (!w.isEmpty()) {
+                words.add(w.toLowerCase(Locale.ROOT));
             }
+        }
+        while (words.size() > 1) {
+            final String last = words.get(words.size() - 1);
+            if (!WHERE_WORDS.contains(last) && !last.chars().allMatch(Character::isDigit)) {
+                break;
+            }
+            words.remove(words.size() - 1);
+        }
+        final StringBuilder out = new StringBuilder();
+        for (final String w : words) {
             if (out.length() > 0) {
                 out.append(' ');
             }
-            out.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1).toLowerCase(Locale.ROOT));
+            out.append(Character.toUpperCase(w.charAt(0))).append(w.substring(1));
         }
         return out.toString();
     }

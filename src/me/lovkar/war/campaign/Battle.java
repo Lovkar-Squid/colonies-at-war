@@ -116,6 +116,32 @@ public record Battle(int attack, int defence, int luck, boolean won, float margi
         return new Battle(attack, defence, 0, won, margin);
     }
 
+    // ------------------------------------------------------------------ a village's guards
+
+    /**
+     * How many of a village's guards fell to a warband: half of them and more the wider it won (one
+     * at the least) when it overran the village; a quarter at most, fewer the worse it went, when it
+     * was thrown back.
+     */
+    public static int guardsFell(final int had, final boolean won, final float margin) {
+        if (had <= 0) {
+            return 0;
+        }
+        final float share = won ? 0.5f + 0.5f * Math.max(0f, margin) : 0.25f * (1f + Math.min(0f, margin));
+        return Math.max(won ? 1 : 0, Math.min(had, Math.round(had * share)));
+    }
+
+    /**
+     * How many men a warband loses to a village's guards: a man for every guard who stood against
+     * it when it was thrown back, one for every two when it won - never more than it brought.
+     */
+    public static int lostToGuards(final int soldiers, final int had, final boolean won) {
+        if (had <= 0 || soldiers <= 0) {
+            return 0;
+        }
+        return Math.min(soldiers, won ? (had + 1) / 2 : had);
+    }
+
     private static float clamp(final float v) {
         return Math.max(-1f, Math.min(1f, v));
     }

@@ -266,8 +266,20 @@ A warband can also march on what is nobody's: a raider camp (MineColonies' barba
 desert camps, the pirate ship, a pillager outpost) or a village. A camp overrun is **cleared** —
 its spawners smashed, the one thing a warband changes in the world for good — and yields the
 raiders' goods; a village only loses what the men carry off. `/war targets` names the nearest of
-each; what counts as which is the structure tags `#colonies_at_war:camp` and `:village`, so a
-datapack can add any structure. Config: `marchOnCamps`.
+each, by the structure's own name; what counts as which is the structure tags
+`#colonies_at_war:camp` and `:village`, so a datapack can add any structure. Config: `marchOnCamps`.
+
+Other mods' camps and villages are targets too, when those mods are installed. None of them is
+needed and none is a dependency:
+
+- **Kings & Monsters**: the ogre outposts and the Ogre King's fort (camps).
+- **IFC-Integrations**: the goblin camp (a camp) and the dwarf village (a village).
+- **Valarian Conquest**: the bandit camp, the bandit ruins, the tent camps, the neutral outpost and
+  every faction's outpost and castle (camps).
+- **Kobolds**: the kobold den (a village).
+- **Guard Villagers**: its guards defend their village, 12 each by default (`villageGuardWeight`;
+  an iron golem is 15, a villager 2). A warband that fights them loses men to them: its sellswords
+  die, its own guards come home carried.
 
 ### Veterans, and the men who fell
 
@@ -280,7 +292,7 @@ of the warehouse, and a colony that holds them gets the gold — or they are let
 
 The `campaigns` block of the server config: `siegeInWorld`, `armyLook` (barbarian, norsemen,
 pirate, amazon), `siegeNights`, `marchMinutesPer200Blocks`, `marchMinimumMinutes`, `plunderRolls`,
-`rationsPerGuard`, `truceDays`, `offerDays`, `mercenaryGold`, `mercenariesPerLevel`, `mercenaryDays`,
+`rationsPerGuard`, `villageGuardWeight`, `truceDays`, `offerDays`, `mercenaryGold`, `mercenariesPerLevel`, `mercenaryDays`,
 `vassalDays`, `tributeStacks`, `allyThreshold`; the `convoys` block: `convoys`, `convoyStacks`,
 `convoyStanding`, `convoysPerWeek`. Design notes in [docs/CAMPAIGNS.md](docs/CAMPAIGNS.md).
 

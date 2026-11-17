@@ -1,0 +1,20 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="GPL-3.0-or-later"
+[[mods]]
+modId="targetgate"
+version="1.0.0"
+displayName="Colonies at War - raid target gate"
+description="Headless test: other mods' camps and villages are targets, Guard Villagers' guards defend a village and are counted on the campaign."
+[[dependencies.targetgate]]
+modId="colonies_at_war"
+type="required"
+versionRange="*"
+ordering="AFTER"
+side="SERVER"
+[[dependencies.targetgate]]
+modId="minecolonies"
+type="required"
+versionRange="*"
+ordering="AFTER"
+side="SERVER"
