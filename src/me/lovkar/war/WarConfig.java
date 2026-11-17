@@ -21,6 +21,11 @@ public final class WarConfig {
     /** Territory, captured buildings, tribute, vassalage and terms. */
     public static final String CONQUEST = "conquest";
 
+    /** A captain's trophy: the banner of his raid, named for him. */
+    public static final String TROPHY_BANNER = "banner";
+    /** ...or his weapon, named for him. */
+    public static final String TROPHY_WEAPON = "weapon";
+
     public static final ModConfigSpec SPEC;
 
     private static final ModConfigSpec.ConfigValue<String> WAR_LEVEL;
@@ -61,6 +66,10 @@ public final class WarConfig {
     private static final ModConfigSpec.IntValue CONVOY_STANDING;
     private static final ModConfigSpec.IntValue CONVOYS_PER_WEEK;
     private static final ModConfigSpec.IntValue ALLY_THRESHOLD;
+    private static final ModConfigSpec.BooleanValue CAPTAINS;
+    private static final ModConfigSpec.IntValue CAPTAIN_EXTRA_HEALTH;
+    private static final ModConfigSpec.BooleanValue CAPTAIN_BOSS_BAR;
+    private static final ModConfigSpec.ConfigValue<String> CAPTAIN_TROPHY;
 
     static {
         final ModConfigSpec.Builder builder = new ModConfigSpec.Builder();
@@ -226,6 +235,28 @@ public final class WarConfig {
                 .comment("Base rolls on the biome's own loot table; a harder trip, a bigger escort and a",
                         "better Explorer each add to it, up to fourteen.")
                 .defineInRange("expeditionRolls", 2, 0, 10);
+        builder.pop();
+
+        builder.comment("Captains - one named man at the head of every raid on a colony").push("captains");
+        CAPTAINS = builder
+                .comment("Every raid on a colony - MineColonies' barbarians, pirates, Egyptians, Norsemen and Amazons,",
+                        "a neighbour's warband, a kingdom's men - is led by a named captain: its chief if it brought",
+                        "one, else its first fighting man. He wears a full set of armour and carries a weapon a tier",
+                        "above his men (neither ever drops), and the town is told when he takes the field and when he",
+                        "falls. Off, raids have no captains; a captain already in the field keeps his name and gear.")
+                .define("captains", true);
+        CAPTAIN_EXTRA_HEALTH = builder
+                .comment("How much more health a captain has than the raid gave him, in percent: 100 doubles it.")
+                .defineInRange("captainExtraHealth", 100, 0, 1000);
+        CAPTAIN_BOSS_BAR = builder
+                .comment("A red bar with the captain's name and health, on the screen of every player within 64 blocks",
+                        "of him, gone when he dies or the raid ends.")
+                .define("captainBossBar", true);
+        CAPTAIN_TROPHY = builder
+                .comment("What a captain leaves when a player or a colony guard kills him, once: banner (a banner in",
+                        "his raid's colours, named for him, saying which raid on which colony and on what day he",
+                        "fell) or weapon (his weapon, named for him, with the same words).")
+                .define("captainTrophy", TROPHY_BANNER, v -> TROPHY_BANNER.equals(v) || TROPHY_WEAPON.equals(v));
         builder.pop();
         SPEC = builder.build();
     }
@@ -555,6 +586,39 @@ public final class WarConfig {
             return RATIONS_PER_GUARD.get();
         } catch (final Throwable t) {
             return 2;
+        }
+    }
+
+    public static boolean captains() {
+        try {
+            return CAPTAINS.get();
+        } catch (final Throwable t) {
+            return true;
+        }
+    }
+
+    public static int captainExtraHealth() {
+        try {
+            return CAPTAIN_EXTRA_HEALTH.get();
+        } catch (final Throwable t) {
+            return 100;
+        }
+    }
+
+    public static boolean captainBossBar() {
+        try {
+            return CAPTAIN_BOSS_BAR.get();
+        } catch (final Throwable t) {
+            return true;
+        }
+    }
+
+    /** {@link #TROPHY_BANNER} or {@link #TROPHY_WEAPON}. */
+    public static String captainTrophy() {
+        try {
+            return CAPTAIN_TROPHY.get();
+        } catch (final Throwable t) {
+            return TROPHY_BANNER;
         }
     }
 
