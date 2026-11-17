@@ -55,6 +55,7 @@ import net.neoforged.bus.api.EventPriority;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
 import net.neoforged.neoforge.common.CommonHooks;
+import net.neoforged.neoforge.common.ModConfigSpec;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.common.util.FakePlayer;
 import net.neoforged.neoforge.common.util.FakePlayerFactory;
@@ -80,7 +81,9 @@ import java.util.UUID;
  * not become a second captain. For each raid the gate checks one named captain, his gear and
  * health, his bar; then a fake player hurts him (the bar follows) and kills him, and the gate
  * checks the one trophy in his drops, nothing of his gear, the bar gone, no trophy from a second
- * death, and - a while later - nobody promoted in his place.</p>
+ * death, and - a while later - nobody promoted in his place. The gate sets {@code captainTrophy}
+ * itself before each kill: the two chiefs leave banners (the default), Stonebrook's captain his
+ * weapon, so one run proves both kinds.</p>
  *
  * <p>MineColonies treats a fake player's damage like the weather: it may wound a raider but never
  * take him below a fifth or more of his health. So the killing blow is {@code die} with the fake
@@ -96,6 +99,8 @@ public final class CapGate {
     private static final String KEY_OF = "com.colonies_at_war.captain.of";
     private static final String KEY_BANNER = "com.colonies_at_war.captain.banner";
     private static final String KEY_WEAPON = "com.colonies_at_war.captain.weapon";
+    private static final String KEY_TROPHY_RAID = "com.colonies_at_war.captain.trophy.raid";
+    private static final String KEY_TROPHY_DAY = "com.colonies_at_war.captain.trophy.day";
     private static final String BARBARIAN_NAME = "com.colonies_at_war.captain.name.barbarian.";
     private static final String ARMY_NAME = "com.colonies_at_war.captain.name.army.";
 
@@ -107,6 +112,8 @@ public final class CapGate {
         /** The warband's attacker, or null for MineColonies' raid. */
         final String attacker;
         final BlockPos spawn;
+        /** The trophy his death is to leave: WarConfig.TROPHY_BANNER or TROPHY_WEAPON. */
+        final String trophy;
         LivingEntity captain;
         Component title;
         boolean checked;
@@ -121,12 +128,14 @@ public final class CapGate {
         /** The armour he wore, which must not be in his drops. */
         final List<Item> gear = new ArrayList<>();
 
-        Watched(final String label, final int event, final boolean wantChief, final String attacker, final BlockPos spawn) {
+        Watched(final String label, final int event, final boolean wantChief, final String attacker, final BlockPos spawn,
+                final String trophy) {
             this.label = label;
             this.event = event;
             this.wantChief = wantChief;
             this.attacker = attacker;
             this.spawn = spawn;
+            this.trophy = trophy;
         }
     }
 
@@ -256,7 +265,7 @@ public final class CapGate {
         int barbarians = 0;
         for (final IColonyEvent event : new ArrayList<>(colony.getEventManager().getEvents().values())) {
             if (!before.contains(event.getID()) && event instanceof BarbarianRaidEvent) {
-                watched.add(new Watched("barbarian raid", event.getID(), true, null, a));
+                watched.add(new Watched("barbarian raid", event.getID(), true, null, a, WarConfig.TROPHY_BANNER));
                 barbarians++;
             }
         }
@@ -268,7 +277,7 @@ public final class CapGate {
         ironhold.setSpawnPoint(b);
         ironhold.setHorde(new Horde(6));
         colony.getEventManager().addEvent(ironhold);
-        watched.add(new Watched("warband of Ironhold", ironhold.getID(), true, "Ironhold", b));
+        watched.add(new Watched("warband of Ironhold", ironhold.getID(), true, "Ironhold", b, WarConfig.TROPHY_BANNER));
 
         final BlockPos c = surface(0, 40);
         final ArmyRaidEvent stonebrook = new ArmyRaidEvent(colony).warband(4243, "Stonebrook", 9002L, 4, 20, 3, 1, "barbarian");
@@ -278,7 +287,8 @@ public final class CapGate {
         stonebrook.setSpawnPoint(c);
         stonebrook.setHorde(chiefless);
         colony.getEventManager().addEvent(stonebrook);
-        watched.add(new Watched("chiefless warband of Stonebrook", stonebrook.getID(), false, "Stonebrook", c));
+        watched.add(new Watched("chiefless warband of Stonebrook", stonebrook.getID(), false, "Stonebrook", c,
+                WarConfig.TROPHY_WEAPON));
         LOGGER.info("[capgate] raids started: {}", watched.stream().map(w -> w.label + " = event " + w.event).toList());
     }
 
@@ -526,7 +536,7 @@ public final class CapGate {
         w.captain.setHealth(w.captain.getMaxHealth() * 0.5f);
     }
 
-    private void kill(final Watched w) {
+    private void kill(final Watched w) throws ReflectiveOperationException {
         w.killed = true;
         final LivingEntity captain = w.captain;
         final UUID id = captain.getUUID();
@@ -536,22 +546,34 @@ public final class CapGate {
                         && Math.abs(bar.getProgress() - captain.getHealth() / captain.getMaxHealth()) < 0.01f,
                 w.before + " -> " + captain.getHealth() + ", bar " + (bar == null ? "none" : bar.getProgress()));
 
+        // the trophy is set by the gate for each raid - banners for the first two, the weapon for the
+        // third - so every run proves both kinds, whatever a rig config file left by another run says
+        setTrophy(w.trophy);
+        final Item held = captain.getMainHandItem().getItem();
         final DamageSource blow = level.damageSources().playerAttack(fake);
         captain.setHealth(0.0f);
         captain.die(blow);
         final List<ItemEntity> got = drops.getOrDefault(id, List.of());
         final List<ItemStack> trophies = trophies(got);
         boolean good = trophies.size() == 1;
-        String what = trophies.size() + " trophies in " + got.size() + " drops";
+        String what = trophies.size() + " trophies in " + got.size() + " drops, wanted a " + w.trophy;
         if (good) {
             final ItemStack trophy = trophies.get(0);
             final Component name = trophy.get(DataComponents.CUSTOM_NAME);
             final ItemLore lore = trophy.get(DataComponents.LORE);
             final BannerPatternLayers layers = trophy.get(DataComponents.BANNER_PATTERNS);
-            final boolean banner = WarConfig.TROPHY_WEAPON.equals(WarConfig.captainTrophy())
-                    || (trophy.getItem() instanceof BannerItem && layers != null && !layers.layers().isEmpty());
-            good = name != null && name.getContents() instanceof TranslatableContents tc && tc.getArgs().length == 1
-                    && w.title.equals(tc.getArgs()[0]) && lore != null && lore.lines().size() >= 2 && banner;
+            final boolean kind = WarConfig.TROPHY_WEAPON.equals(w.trophy) ? trophy.getItem() == held
+                    : trophy.getItem() instanceof BannerItem && layers != null && !layers.layers().isEmpty();
+            good = kind && name != null && name.getContents() instanceof TranslatableContents tc
+                    && (WarConfig.TROPHY_WEAPON.equals(w.trophy) ? KEY_WEAPON : KEY_BANNER).equals(tc.getKey())
+                    && tc.getArgs().length == 1 && w.title.equals(tc.getArgs()[0]) && lore != null && lore.lines().size() == 2
+                    // which raid on which colony, and the colony's day he fell
+                    && lore.lines().get(0).getContents() instanceof TranslatableContents raidLine
+                    && KEY_TROPHY_RAID.equals(raidLine.getKey()) && raidLine.getArgs().length == 2
+                    && colony.getName().equals(raidLine.getArgs()[1])
+                    && lore.lines().get(1).getContents() instanceof TranslatableContents dayLine
+                    && KEY_TROPHY_DAY.equals(dayLine.getKey()) && dayLine.getArgs().length == 1
+                    && Integer.valueOf(colony.getDay()).equals(dayLine.getArgs()[0]);
             what += ": " + BuiltInRegistries.ITEM.getKey(trophy.getItem()).getPath() + " named " + (name == null ? "nothing" : name.getString())
                     + ", lore " + (lore == null ? "none" : lore.lines().stream().map(Component::getString).toList());
         }
@@ -578,6 +600,17 @@ public final class CapGate {
                 trophies(again).isEmpty() && dropEvents.getOrDefault(id, 0) == events + 1 && trophies(drops.get(id)).size() == 1,
                 trophies(again).size() + " in a second drop, " + (dropEvents.getOrDefault(id, 0) - events - 1)
                         + " extra drop event(s) from a second death");
+    }
+
+    /** captainTrophy, in the running server's config: its value is private to WarConfig, so by reflection. */
+    @SuppressWarnings("unchecked")
+    private static void setTrophy(final String kind) throws ReflectiveOperationException {
+        final java.lang.reflect.Field field = WarConfig.class.getDeclaredField("CAPTAIN_TROPHY");
+        field.setAccessible(true);
+        ((ModConfigSpec.ConfigValue<String>) field.get(null)).set(kind);
+        if (!kind.equals(WarConfig.captainTrophy())) {
+            throw new IllegalStateException("captainTrophy did not take " + kind);
+        }
     }
 
     private static List<ItemStack> trophies(final List<ItemEntity> drops) {

@@ -837,6 +837,15 @@ public class Captains extends SavedData {
      * dies too, by MineColonies' own hand; that is not a fall and nobody is told.
      */
     public static void onDeath(final LivingDeathEvent event) {
+        // fails soft: a throw from here would crash the tick of whatever killed him
+        try {
+            fall(event);
+        } catch (final Throwable t) {
+            Warfare.LOGGER.warn("[captain] could not see a captain fall: {}", t.toString());
+        }
+    }
+
+    private static void fall(final LivingDeathEvent event) {
         final LivingEntity man = event.getEntity();
         if (man.level().isClientSide() || !isCaptain(man)) {
             return;
@@ -870,6 +879,14 @@ public class Captains extends SavedData {
      * second one.
      */
     public static void onDrops(final LivingDropsEvent event) {
+        try {
+            award(event);
+        } catch (final Throwable t) {
+            Warfare.LOGGER.warn("[captain] could not give a captain's trophy: {}", t.toString());
+        }
+    }
+
+    private static void award(final LivingDropsEvent event) {
         final LivingEntity man = event.getEntity();
         if (man.level().isClientSide() || !isCaptain(man) || !(man.level() instanceof ServerLevel level)) {
             return;
